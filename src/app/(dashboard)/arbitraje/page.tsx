@@ -72,7 +72,7 @@ export default function PaginaArbitraje() {
                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--texto-secundario)' }}>Cuerpo Arbitral Asignado</th>
               </tr>
             </thead>
-            <tbody className="divide-y" style={{ divideColor: 'var(--borde-suave)' }}>
+            <tbody className="divide-y" style={{ borderColor: 'var(--borde-suave)' }}>
               {cargando ? (
                 <tr><td colSpan={4} className="px-6 py-8 text-center text-sm" style={{ color: 'var(--texto-terciario)' }}>Cargando asignaciones...</td></tr>
               ) : partidos.map((p) => (
