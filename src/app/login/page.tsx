@@ -32,6 +32,7 @@ function LoginContenido() {
           email,
           password: contrasena,
           options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
             data: {
               nombre_completo: nombreCompleto,
             },
@@ -39,7 +40,7 @@ function LoginContenido() {
         });
 
         if (errorRegistro) throw errorRegistro;
-        setMensajeExito('¡Cuenta creada exitosamente! Revisa tu correo para confirmar tu cuenta.');
+        setMensajeExito('¡Cuenta creada exitosamente! Revisa tu correo para confirmar tu cuenta. El enlace de confirmación te llevará directamente al sistema.');
         setModoRegistro(false);
       } else {
         if (email === 'admin@ligapro.ec' && contrasena === 'admin123') {
