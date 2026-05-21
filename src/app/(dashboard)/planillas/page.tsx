@@ -129,13 +129,13 @@ export default function PaginaPlanillas() {
 
           return {
             id: p.id,
-            local: p.local?.nombre || 'Desconocido',
-            visitante: p.visitante?.nombre || 'Desconocido',
+            local: ((p.local as any)?.nombre || (p.local as any)?.[0]?.nombre) || 'Desconocido',
+            visitante: ((p.visitante as any)?.nombre || (p.visitante as any)?.[0]?.nombre) || 'Desconocido',
             fecha: fechaObj.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }),
             hora: fechaObj.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' }),
             jornada: p.jornada,
             estado: estadoFinal,
-            estadio: p.estadio?.nombre || 'Sin estadio',
+            estadio: ((p.estadio as any)?.nombre || (p.estadio as any)?.[0]?.nombre) || 'Sin estadio',
             countdown,
             planillaId: p.planillas && p.planillas.length > 0 ? p.planillas[0].id : null,
           };

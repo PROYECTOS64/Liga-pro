@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Trophy, ArrowLeft, Scale, ChevronRight, CheckCircle2,
   Circle, Target, Users, Minus, ArrowUpDown,
-  Play, RotateCcw, Info, AlertTriangle, Zap, Loader2
+  Play, RotateCcw, Info, AlertTriangle, Zap, Loader2, Award
 } from 'lucide-react';
 
 interface ClubData {
