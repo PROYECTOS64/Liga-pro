@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
- * Middleware de autenticación para Next.js.
+ * Middleware/Proxy de autenticación para Next.js.
  * Intercepta todas las peticiones para:
  * 1. Refrescar la sesión de Supabase automáticamente.
  * 2. Redirigir usuarios no autenticados a /login.
@@ -43,6 +43,8 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const mockAdmin = request.cookies.get('mock_admin_session')?.value === 'true';
+  const mockSessionRole = request.cookies.get('mock_session_role')?.value;
+  const mockSessionActive = mockSessionRole !== undefined && mockSessionRole !== '';
 
   // Rutas públicas que no requieren autenticación
   const rutasPublicas = ['/login', '/registro', '/auth/callback'];
@@ -51,14 +53,14 @@ export async function proxy(request: NextRequest) {
   );
 
   // Redirigir a login si no está autenticado y no es ruta pública
-  if (!user && !mockAdmin && !esRutaPublica) {
+  if (!user && !mockAdmin && !mockSessionActive && !esRutaPublica) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
   // Redirigir al dashboard si ya está autenticado y accede a ruta pública
-  if ((user || mockAdmin) && esRutaPublica) {
+  if ((user || mockAdmin || mockSessionActive) && esRutaPublica) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);
