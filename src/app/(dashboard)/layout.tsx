@@ -103,7 +103,7 @@ export default function DashboardLayout({
     } catch (e) {
       console.error(e);
     } finally {
-      window.location.href = '/login';
+      router.replace('/login');
     }
   };
 
