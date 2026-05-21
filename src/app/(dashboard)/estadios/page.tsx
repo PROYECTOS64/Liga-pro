@@ -161,7 +161,7 @@ export default function PaginaEstadios() {
             </button>
           ))}
           <span className="text-xs" style={{ color: 'var(--texto-terciario)' }}>|</span>
-          {(['todos', 'Natural', 'Sintético'] as const).map((f) => (
+          {(['todos', 'NATURAL', 'SINTETICO', 'HIBRIDO'] as any).map((f: any) => (
             <button
               key={f}
               onClick={() => setFiltroCesped(f)}
