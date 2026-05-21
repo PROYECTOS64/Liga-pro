@@ -2,82 +2,48 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import {
   Trophy, ArrowLeft, TrendingUp, Calendar, BarChart3,
   ChevronLeft, ChevronRight, Star, Target, Users,
-  Shield, Award
+  Shield, Award, Loader2, MapPin, Clock, Eye
 } from 'lucide-react';
 
-// ============================================
-// DATOS DE EJEMPLO - Tabla de Posiciones
-// ============================================
-interface EquipoPosicion {
-  pos: number;
-  club: string;
+// Interfaces para tipado
+interface ClubData {
+  nombre: string;
   abreviatura: string;
-  color: string;
-  pj: number;
-  g: number;
-  e: number;
-  p: number;
-  gf: number;
-  gc: number;
-  dg: number;
-  pts: number;
+  color_principal: string;
+  color_secundario: string;
 }
 
-const tablaPosiciones: EquipoPosicion[] = [
-  { pos: 1, club: 'Independiente del Valle', abreviatura: 'IDV', color: '#C41E3A', pj: 15, g: 11, e: 2, p: 2, gf: 32, gc: 12, dg: 20, pts: 35 },
-  { pos: 2, club: 'Barcelona SC', abreviatura: 'BSC', color: '#FFD700', pj: 15, g: 10, e: 3, p: 2, gf: 28, gc: 14, dg: 14, pts: 33 },
-  { pos: 3, club: 'LDU Quito', abreviatura: 'LDU', color: '#FFFFFF', pj: 15, g: 9, e: 4, p: 2, gf: 25, gc: 11, dg: 14, pts: 31 },
-  { pos: 4, club: 'Emelec', abreviatura: 'EME', color: '#005BAA', pj: 15, g: 9, e: 2, p: 4, gf: 24, gc: 16, dg: 8, pts: 29 },
-  { pos: 5, club: 'Deportivo Cuenca', abreviatura: 'DCU', color: '#C41E3A', pj: 15, g: 8, e: 3, p: 4, gf: 22, gc: 15, dg: 7, pts: 27 },
-  { pos: 6, club: 'Aucas', abreviatura: 'AUC', color: '#FF8C00', pj: 15, g: 7, e: 4, p: 4, gf: 20, gc: 17, dg: 3, pts: 25 },
-  { pos: 7, club: 'El Nacional', abreviatura: 'NAC', color: '#FF0000', pj: 15, g: 7, e: 3, p: 5, gf: 19, gc: 16, dg: 3, pts: 24 },
-  { pos: 8, club: 'Mushuc Runa', abreviatura: 'MUS', color: '#008000', pj: 15, g: 6, e: 5, p: 4, gf: 18, gc: 14, dg: 4, pts: 23 },
-  { pos: 9, club: 'Delfín', abreviatura: 'DEL', color: '#4169E1', pj: 15, g: 6, e: 4, p: 5, gf: 17, gc: 16, dg: 1, pts: 22 },
-  { pos: 10, club: 'Técnico Universitario', abreviatura: 'TUN', color: '#800020', pj: 15, g: 6, e: 3, p: 6, gf: 16, gc: 18, dg: -2, pts: 21 },
-  { pos: 11, club: 'Orense', abreviatura: 'ORE', color: '#008B8B', pj: 15, g: 5, e: 4, p: 6, gf: 15, gc: 19, dg: -4, pts: 19 },
-  { pos: 12, club: 'Guayaquil City', abreviatura: 'GCY', color: '#6A0DAD', pj: 15, g: 5, e: 3, p: 7, gf: 14, gc: 20, dg: -6, pts: 18 },
-  { pos: 13, club: 'Cumbayá', abreviatura: 'CUM', color: '#2E8B57', pj: 15, g: 4, e: 4, p: 7, gf: 13, gc: 21, dg: -8, pts: 16 },
-  { pos: 14, club: 'Universidad Católica', abreviatura: 'UCE', color: '#0000CD', pj: 15, g: 4, e: 3, p: 8, gf: 12, gc: 22, dg: -10, pts: 15 },
-  { pos: 15, club: 'Libertad', abreviatura: 'LIB', color: '#228B22', pj: 15, g: 3, e: 2, p: 10, gf: 10, gc: 26, dg: -16, pts: 11 },
-  { pos: 16, club: 'Macará', abreviatura: 'MAC', color: '#4682B4', pj: 15, g: 2, e: 3, p: 10, gf: 9, gc: 27, dg: -18, pts: 9 },
-];
+interface EquipoPosicion {
+  posicion: number;
+  club_id: string;
+  club: ClubData;
+  partidos_jugados: number;
+  ganados: number;
+  empatados: number;
+  perdidos: number;
+  goles_favor: number;
+  goles_contra: number;
+  saldo_goles: number;
+  goles_visitante: number;
+  puntos: number;
+}
 
-// Datos de fixture por jornada
 interface Partido {
   id: string;
-  local: string;
-  visitante: string;
-  golLocal: number | null;
-  golVisitante: number | null;
-  fecha: string;
-  hora: string;
-  estadio: string;
-  estado: 'FINALIZADO' | 'EN_CURSO' | 'PROGRAMADO';
+  jornada: number;
+  fecha_hora: string;
+  goles_local: number | null;
+  goles_visitante: number | null;
+  estado: 'FINALIZADO' | 'EN_CURSO' | 'PROGRAMADO' | 'SUSPENDIDO';
+  arbitro: string;
+  local: ClubData & { estadio?: { nombre: string; ciudad: string } };
+  visitante: ClubData;
 }
 
-const fixtureJornadas: Record<number, Partido[]> = {
-  15: [
-    { id: '1', local: 'Barcelona SC', visitante: 'Emelec', golLocal: 2, golVisitante: 1, fecha: '2026-05-17', hora: '15:30', estadio: 'Monumental', estado: 'FINALIZADO' },
-    { id: '2', local: 'LDU Quito', visitante: 'El Nacional', golLocal: 1, golVisitante: 0, fecha: '2026-05-17', hora: '18:00', estadio: 'Rodrigo Paz Delgado', estado: 'FINALIZADO' },
-    { id: '3', local: 'Independiente del Valle', visitante: 'Aucas', golLocal: 3, golVisitante: 1, fecha: '2026-05-18', hora: '12:00', estadio: 'Rumiñahui', estado: 'FINALIZADO' },
-    { id: '4', local: 'Deportivo Cuenca', visitante: 'Mushuc Runa', golLocal: 0, golVisitante: 0, fecha: '2026-05-18', hora: '15:00', estadio: 'Alejandro Serrano Aguilar', estado: 'FINALIZADO' },
-    { id: '5', local: 'Delfín', visitante: 'Técnico Universitario', golLocal: 2, golVisitante: 2, fecha: '2026-05-18', hora: '17:30', estadio: 'Jocay', estado: 'FINALIZADO' },
-    { id: '6', local: 'Orense', visitante: 'Guayaquil City', golLocal: 1, golVisitante: 0, fecha: '2026-05-19', hora: '12:00', estadio: '9 de Mayo', estado: 'FINALIZADO' },
-    { id: '7', local: 'Cumbayá', visitante: 'Universidad Católica', golLocal: null, golVisitante: null, fecha: '2026-05-21', hora: '15:30', estadio: 'Olímpico de Cumbayá', estado: 'PROGRAMADO' },
-    { id: '8', local: 'Libertad', visitante: 'Macará', golLocal: null, golVisitante: null, fecha: '2026-05-21', hora: '18:00', estadio: 'Reales Tamarindos', estado: 'PROGRAMADO' },
-  ],
-  14: [
-    { id: '9', local: 'Emelec', visitante: 'LDU Quito', golLocal: 1, golVisitante: 1, fecha: '2026-05-10', hora: '15:30', estadio: 'George Capwell', estado: 'FINALIZADO' },
-    { id: '10', local: 'El Nacional', visitante: 'Independiente del Valle', golLocal: 0, golVisitante: 2, fecha: '2026-05-10', hora: '18:00', estadio: 'Olímpico Atahualpa', estado: 'FINALIZADO' },
-    { id: '11', local: 'Aucas', visitante: 'Barcelona SC', golLocal: 1, golVisitante: 3, fecha: '2026-05-11', hora: '12:00', estadio: 'Gonzalo Pozo Ripalda', estado: 'FINALIZADO' },
-    { id: '12', local: 'Mushuc Runa', visitante: 'Delfín', golLocal: 2, golVisitante: 0, fecha: '2026-05-11', hora: '15:00', estadio: 'La Cocha', estado: 'FINALIZADO' },
-  ],
-};
-
-// Goleadores
 interface Goleador {
   nombre: string;
   club: string;
@@ -85,7 +51,13 @@ interface Goleador {
   asistencias: number;
 }
 
-const goleadores: Goleador[] = [
+interface Asistidor {
+  nombre: string;
+  club: string;
+  asistencias: number;
+}
+
+const mockGoleadores: Goleador[] = [
   { nombre: 'Junior Sornoza', club: 'Independiente del Valle', goles: 12, asistencias: 5 },
   { nombre: 'Damián Díaz', club: 'Barcelona SC', goles: 10, asistencias: 7 },
   { nombre: 'Facundo Martínez', club: 'LDU Quito', goles: 9, asistencias: 3 },
@@ -98,14 +70,7 @@ const goleadores: Goleador[] = [
   { nombre: 'Fernando Gaibor', club: 'Técnico Universitario', goles: 5, asistencias: 4 },
 ];
 
-// Asistidores top
-interface Asistidor {
-  nombre: string;
-  club: string;
-  asistencias: number;
-}
-
-const asistidores: Asistidor[] = [
+const mockAsistidores: Asistidor[] = [
   { nombre: 'Damián Díaz', club: 'Barcelona SC', asistencias: 7 },
   { nombre: 'Jonathan Betancourt', club: 'Mushuc Runa', asistencias: 6 },
   { nombre: 'Junior Sornoza', club: 'Independiente del Valle', asistencias: 5 },
@@ -116,18 +81,212 @@ const asistidores: Asistidor[] = [
   { nombre: 'Steven Tapiero', club: 'Aucas', asistencias: 3 },
 ];
 
+// Mapa de etiquetas de fase
+const etiquetasFase: Record<string, string> = {
+  FASE_UNO: 'Fase Uno',
+  FASE_DOS: 'Fase Dos',
+  CLASIFICACION: 'Clasificación',
+  PLAYOFF: 'Playoff',
+  FINAL: 'Final',
+};
+
+// Colores de estado
+const estadoConfig: Record<string, { bg: string; text: string; label: string }> = {
+  FINALIZADO: { bg: '#E5E7EB', text: '#374151', label: 'Finalizado' },
+  EN_CURSO: { bg: '#DEF7EC', text: '#03543F', label: 'En curso' },
+  PROGRAMADO: { bg: '#DBEAFE', text: '#1E40AF', label: 'Programado' },
+  SUSPENDIDO: { bg: '#FEE2E2', text: '#991B1B', label: 'Suspendido' },
+};
+
 type TabDetalle = 'posiciones' | 'fixture' | 'estadisticas';
 
 export default function PaginaDetalleCompeticion() {
+  const { id } = useParams();
   const [tabActiva, setTabActiva] = useState<TabDetalle>('posiciones');
-  const [jornadaActual, setJornadaActual] = useState(15);
+  const [jornadaActual, setJornadaActual] = useState(1);
   const [animado, setAnimado] = useState(false);
+
+  // Estados de datos Supabase
+  const [competicion, setCompeticion] = useState<any>(null);
+  const [tablaPosiciones, setTablaPosiciones] = useState<EquipoPosicion[]>([]);
+  const [partidos, setPartidos] = useState<Partido[]>([]);
+  const [goleadores, setGoleadores] = useState<Goleador[]>(mockGoleadores);
+  const [asistidores, setAsistidores] = useState<Asistidor[]>(mockAsistidores);
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
     setAnimado(true);
-  }, []);
+    if (!id) return;
 
-  const partidosJornada = fixtureJornadas[jornadaActual] || [];
+    async function fetchDatos() {
+      try {
+        const supabase = await import('@/lib/supabase/cliente').then(m => m.crearClienteNavegador());
+
+        // 1. Obtener detalles de la competición
+        const { data: compData, error: compErr } = await supabase
+          .from('competiciones')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (compErr || !compData) {
+          console.error('Error fetching competition:', compErr);
+          setCargando(false);
+          return;
+        }
+        setCompeticion(compData);
+
+        // 2. Obtener la tabla de posiciones calculada para la fase actual
+        const { data: tablaData, error: tablaErr } = await supabase
+          .from('tabla_posiciones')
+          .select(`
+            *,
+            club:club_id (
+              nombre,
+              abreviatura,
+              color_principal,
+              color_secundario
+            )
+          `)
+          .eq('competicion_id', id)
+          .eq('fase', compData.fase_actual)
+          .order('posicion', { ascending: true });
+
+        if (tablaErr) {
+          console.error('Error fetching standings:', tablaErr);
+        } else if (tablaData) {
+          setTablaPosiciones(tablaData as unknown as EquipoPosicion[]);
+        }
+
+        // 3. Obtener fixture de la competición
+        const { data: partidosData, error: partidosErr } = await supabase
+          .from('partidos')
+          .select(`
+            *,
+            arbitro:arbitro_principal,
+            local:club_local_id (
+              nombre,
+              abreviatura,
+              color_principal,
+              color_secundario,
+              estadio:estadio_id ( nombre, ciudad )
+            ),
+            visitante:club_visitante_id (
+              nombre,
+              abreviatura,
+              color_principal,
+              color_secundario
+            )
+          `)
+          .eq('competicion_id', id)
+          .order('jornada', { ascending: true })
+          .order('fecha_hora', { ascending: true });
+
+        if (partidosErr) {
+          console.error('Error fetching partidos:', partidosErr);
+        } else if (partidosData) {
+          setPartidos(partidosData as unknown as Partido[]);
+          
+          // Calcular la jornada actual por defecto
+          const primerPartidoNoFinalizado = partidosData.find((p: any) => p.estado !== 'FINALIZADO');
+          if (primerPartidoNoFinalizado) {
+            setJornadaActual(primerPartidoNoFinalizado.jornada);
+          } else if (partidosData.length > 0) {
+            // Si todos finalizaron, mostrar la última jornada
+            setJornadaActual(Math.max(...partidosData.map((p: any) => p.jornada)));
+          }
+          
+          // 4. Intentar calcular goleadores/asistidores de incidencias
+          const matchIds = partidosData?.map((p: any) => p.id) || [];
+          if (matchIds.length > 0) {
+            const { data: incs, error: incsErr } = await supabase
+              .from('incidencias')
+              .select(`
+                *,
+                jugador:jugador_id ( nombre_completo ),
+                jugador_entra:jugador_entra_id ( nombre_completo ),
+                club:club_id ( nombre )
+              `)
+              .in('partido_id', matchIds)
+              .eq('tipo', 'GOL');
+
+            if (incs && incs.length > 0) {
+              const golesMap: Record<string, { jugador: string; club: string; goles: number; asistencias: number }> = {};
+              const asistenciasMap: Record<string, { jugador: string; club: string; asistencias: number }> = {};
+
+              incs.forEach((inc: any) => {
+                const jugador = inc.jugador?.nombre_completo || 'Jugador';
+                const club = inc.club?.nombre || 'Club';
+
+                if (!golesMap[jugador]) {
+                  golesMap[jugador] = { jugador, club, goles: 0, asistencias: 0 };
+                }
+                golesMap[jugador].goles += 1;
+
+                if (inc.jugador_entra?.nombre_completo) {
+                  const asistente = inc.jugador_entra.nombre_completo;
+                  golesMap[jugador].asistencias += 1;
+                  
+                  if (!asistenciasMap[asistente]) {
+                    asistenciasMap[asistente] = { jugador: asistente, club, asistencias: 0 };
+                  }
+                  asistenciasMap[asistente].asistencias += 1;
+                }
+              });
+
+              const dynamicGoleadores = Object.values(golesMap)
+                .sort((a, b) => b.goles - a.goles || b.asistencias - a.asistencias)
+                .slice(0, 10)
+                .map(g => ({ nombre: g.jugador, club: g.club, goles: g.goles, asistencias: g.asistencias }));
+
+              const dynamicAsistidores = Object.values(asistenciasMap)
+                .sort((a, b) => b.asistencias - a.asistencias)
+                .slice(0, 10)
+                .map(a => ({ nombre: a.jugador, club: a.club, asistencias: a.asistencias }));
+
+              if (dynamicGoleadores.length > 0) {
+                setGoleadores(dynamicGoleadores);
+              }
+              if (dynamicAsistidores.length > 0) {
+                setAsistidores(dynamicAsistidores);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error loading data:', err);
+      } finally {
+        setCargando(false);
+      }
+    }
+
+    fetchDatos();
+  }, [id]);
+
+  if (cargando) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
+        <Loader2 className="animate-spin text-[#D4A843]" size={40} />
+        <p className="text-sm font-medium" style={{ color: 'var(--texto-secundario)' }}>Cargando detalles de competición...</p>
+      </div>
+    );
+  }
+
+  if (!competicion) {
+    return (
+      <div className="text-center py-12">
+        <Trophy size={48} className="text-gray-300 mx-auto mb-4" />
+        <h2 className="text-lg font-bold" style={{ color: 'var(--texto-primario)' }}>Competición no encontrada</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--texto-secundario)' }}>El identificador proporcionado no corresponde a ningún campeonato registrado.</p>
+        <Link href="/competiciones" className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-[#1B2A4A] text-white rounded-lg text-sm no-underline">
+          <ArrowLeft size={16} /> Volver a Competiciones
+        </Link>
+      </div>
+    );
+  }
+
+  const partidosJornada = partidos.filter(p => p.jornada === jornadaActual);
+  const maxJornadas = competicion.serie === 'A' ? 30 : 36;
 
   const tabs: { valor: TabDetalle; etiqueta: string; icono: typeof TrendingUp }[] = [
     { valor: 'posiciones', etiqueta: 'Tabla de Posiciones', icono: TrendingUp },
@@ -158,7 +317,11 @@ export default function PaginaDetalleCompeticion() {
         >
           <div
             className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-            style={{ background: 'linear-gradient(135deg, #D4A843, #B8922F)' }}
+            style={{
+              background: competicion.serie === 'A' 
+                ? 'linear-gradient(135deg, #D4A843, #B8922F)' 
+                : 'linear-gradient(135deg, #2980B9, #1F6691)'
+            }}
           >
             <div className="flex items-center gap-4">
               <div
@@ -168,8 +331,10 @@ export default function PaginaDetalleCompeticion() {
                 <Trophy size={28} className="text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Serie A - LigaPro 2026</h1>
-                <p className="text-white/70 text-sm mt-0.5">Primera División • Fase Uno • Jornada 15 de 30</p>
+                <h1 className="text-xl font-bold text-white">{competicion.nombre}</h1>
+                <p className="text-white/70 text-sm mt-0.5">
+                  {competicion.serie === 'A' ? 'Primera División' : 'Segunda División'} • {etiquetasFase[competicion.fase_actual] || competicion.fase_actual} • Temporada {competicion.temporada}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -178,13 +343,16 @@ export default function PaginaDetalleCompeticion() {
                 style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
               >
                 <Users size={14} />
-                16 equipos
+                {competicion.num_equipos} equipos
               </span>
               <span
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-                style={{ background: '#DEF7EC', color: '#03543F' }}
+                style={{
+                  background: competicion.estado === 'EN_CURSO' ? '#DEF7EC' : '#E5E7EB',
+                  color: competicion.estado === 'EN_CURSO' ? '#03543F' : '#374151'
+                }}
               >
-                Activa
+                {competicion.estado === 'EN_CURSO' ? 'Activa' : 'Finalizada'}
               </span>
             </div>
           </div>
@@ -228,7 +396,7 @@ export default function PaginaDetalleCompeticion() {
             style={{ background: 'linear-gradient(135deg, #1B2A4A, #111D35)' }}
           >
             <TrendingUp size={18} className="text-white" />
-            <h2 className="text-white font-semibold text-sm">Tabla de Posiciones - Fase Uno</h2>
+            <h2 className="text-white font-semibold text-sm">Tabla de Posiciones - {etiquetasFase[competicion.fase_actual] || competicion.fase_actual}</h2>
           </div>
 
           <div className="overflow-x-auto">
@@ -249,8 +417,8 @@ export default function PaginaDetalleCompeticion() {
               </thead>
               <tbody>
                 {tablaPosiciones.map((equipo) => {
-                  const esZonaClasificacion = equipo.pos === 1;
-                  const esZonaDescenso = equipo.pos >= 15;
+                  const esZonaClasificacion = competicion.serie === 'A' ? equipo.posicion === 1 : equipo.posicion <= 2;
+                  const esZonaDescenso = equipo.posicion >= (competicion.num_equipos - 1);
 
                   let fondoFila = 'transparent';
                   let bordeIzquierdo = 'none';
@@ -262,10 +430,12 @@ export default function PaginaDetalleCompeticion() {
                     bordeIzquierdo = '4px solid #C0392B';
                   }
 
+                  const colorFondoClub = equipo.club.color_principal || '#A0AEC0';
+
                   return (
                     <tr
-                      key={equipo.pos}
-                      className="transition-colors hover:bg-gray-50"
+                      key={equipo.posicion}
+                      className="transition-colors hover:bg-gray-50/50"
                       style={{
                         background: fondoFila,
                         borderBottom: '1px solid var(--borde-suave)',
@@ -282,7 +452,7 @@ export default function PaginaDetalleCompeticion() {
                             color: esZonaClasificacion || esZonaDescenso ? 'white' : 'var(--texto-primario)',
                           }}
                         >
-                          {equipo.pos}
+                          {equipo.posicion}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -292,31 +462,31 @@ export default function PaginaDetalleCompeticion() {
                             style={{
                               width: '32px',
                               height: '32px',
-                              background: equipo.color,
-                              border: equipo.color === '#FFFFFF' ? '2px solid #E5E7EB' : 'none',
-                              color: equipo.color === '#FFFFFF' || equipo.color === '#FFD700' ? '#1A1A2E' : 'white',
+                              background: colorFondoClub,
+                              border: colorFondoClub === '#FFFFFF' ? '2px solid #E5E7EB' : 'none',
+                              color: colorFondoClub === '#FFFFFF' || colorFondoClub === '#FFD700' || colorFondoClub === '#F1C40F' ? '#1A1A2E' : 'white',
                             }}
                           >
-                            {equipo.abreviatura}
+                            {equipo.club.abreviatura}
                           </div>
                           <span className="font-medium" style={{ color: 'var(--texto-primario)' }}>
-                            {equipo.club}
+                            {equipo.club.nombre}
                           </span>
                           {esZonaClasificacion && <Star size={14} style={{ color: '#D4A843' }} />}
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-center" style={{ color: 'var(--texto-secundario)' }}>{equipo.pj}</td>
-                      <td className="px-3 py-3 text-center font-medium" style={{ color: '#27AE60' }}>{equipo.g}</td>
-                      <td className="px-3 py-3 text-center" style={{ color: 'var(--texto-secundario)' }}>{equipo.e}</td>
-                      <td className="px-3 py-3 text-center" style={{ color: '#C0392B' }}>{equipo.p}</td>
-                      <td className="px-3 py-3 text-center" style={{ color: 'var(--texto-secundario)' }}>{equipo.gf}</td>
-                      <td className="px-3 py-3 text-center" style={{ color: 'var(--texto-secundario)' }}>{equipo.gc}</td>
-                      <td className="px-3 py-3 text-center font-medium" style={{ color: equipo.dg > 0 ? '#27AE60' : equipo.dg < 0 ? '#C0392B' : 'var(--texto-secundario)' }}>
-                        {equipo.dg > 0 ? `+${equipo.dg}` : equipo.dg}
+                      <td className="px-3 py-3 text-center" style={{ color: 'var(--texto-secundario)' }}>{equipo.partidos_jugados}</td>
+                      <td className="px-3 py-3 text-center font-medium" style={{ color: '#27AE60' }}>{equipo.ganados}</td>
+                      <td className="px-3 py-3 text-center" style={{ color: 'var(--texto-secundario)' }}>{equipo.empatados}</td>
+                      <td className="px-3 py-3 text-center" style={{ color: '#C0392B' }}>{equipo.perdidos}</td>
+                      <td className="px-3 py-3 text-center" style={{ color: 'var(--texto-secundario)' }}>{equipo.goles_favor}</td>
+                      <td className="px-3 py-3 text-center" style={{ color: 'var(--texto-secundario)' }}>{equipo.goles_contra}</td>
+                      <td className="px-3 py-3 text-center font-medium" style={{ color: equipo.saldo_goles > 0 ? '#27AE60' : equipo.saldo_goles < 0 ? '#C0392B' : 'var(--texto-secundario)' }}>
+                        {equipo.saldo_goles > 0 ? `+${equipo.saldo_goles}` : equipo.saldo_goles}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex items-center justify-center text-sm font-bold" style={{ color: 'var(--texto-primario)' }}>
-                          {equipo.pts}
+                          {equipo.puntos}
                         </span>
                       </td>
                     </tr>
@@ -330,7 +500,9 @@ export default function PaginaDetalleCompeticion() {
           <div className="px-5 py-3 flex items-center gap-6" style={{ borderTop: '1px solid var(--borde-suave)', background: 'var(--fondo-principal)' }}>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full" style={{ background: '#D4A843' }} />
-              <span className="text-xs" style={{ color: 'var(--texto-secundario)' }}>Zona de clasificación (Libertadores)</span>
+              <span className="text-xs" style={{ color: 'var(--texto-secundario)' }}>
+                {competicion.serie === 'A' ? 'Clasificación a Final / Libertadores' : 'Zona de Ascenso (Serie A)'}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full" style={{ background: '#C0392B' }} />
@@ -352,7 +524,11 @@ export default function PaginaDetalleCompeticion() {
         >
           <div
             className="flex items-center justify-between px-5 py-3.5"
-            style={{ background: 'linear-gradient(135deg, #2980B9, #1F6691)' }}
+            style={{
+              background: competicion.serie === 'A' 
+                ? 'linear-gradient(135deg, #D4A843, #B8922F)' 
+                : 'linear-gradient(135deg, #2980B9, #1F6691)'
+            }}
           >
             <div className="flex items-center gap-3">
               <Calendar size={18} className="text-white" />
@@ -370,9 +546,9 @@ export default function PaginaDetalleCompeticion() {
                 Jornada {jornadaActual}
               </span>
               <button
-                onClick={() => setJornadaActual(Math.min(30, jornadaActual + 1))}
+                onClick={() => setJornadaActual(Math.min(maxJornadas, jornadaActual + 1))}
                 className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/20 transition-colors"
-                disabled={jornadaActual >= 30}
+                disabled={jornadaActual >= maxJornadas}
               >
                 <ChevronRight size={18} />
               </button>
@@ -388,59 +564,101 @@ export default function PaginaDetalleCompeticion() {
                 </p>
               </div>
             ) : (
-              partidosJornada.map((partido) => (
-                <div
-                  key={partido.id}
-                  className="flex items-center justify-between p-4 rounded-xl transition-colors hover:bg-gray-50"
-                  style={{
-                    border: '1px solid var(--borde-suave)',
-                    background: partido.estado === 'EN_CURSO' ? 'rgba(39, 174, 96, 0.04)' : 'transparent',
-                  }}
-                >
-                  {/* Fecha y hora */}
-                  <div className="text-center min-w-[80px]">
-                    <p className="text-xs font-medium" style={{ color: 'var(--texto-secundario)' }}>
-                      {new Date(partido.fecha).toLocaleDateString('es-EC', { day: 'numeric', month: 'short' })}
-                    </p>
-                    <p className="text-xs" style={{ color: 'var(--texto-terciario)' }}>{partido.hora}</p>
-                  </div>
+              partidosJornada.map((partido) => {
+                const config = estadoConfig[partido.estado] || { bg: '#E5E7EB', text: '#374151', label: partido.estado };
+                const localColor = partido.local.color_principal || '#A0AEC0';
+                const visitanteColor = partido.visitante.color_principal || '#A0AEC0';
 
-                  {/* Equipos y marcador */}
-                  <div className="flex items-center gap-4 flex-1 justify-center">
-                    <span className="text-sm font-semibold text-right flex-1" style={{ color: 'var(--texto-primario)' }}>
-                      {partido.local}
-                    </span>
-                    <div
-                      className="flex items-center justify-center rounded-lg px-3 py-1.5 min-w-[60px]"
-                      style={{
-                        background: partido.estado === 'FINALIZADO' ? 'var(--ligapro-navy)' : 'var(--fondo-principal)',
-                        color: partido.estado === 'FINALIZADO' ? 'white' : 'var(--texto-secundario)',
-                      }}
-                    >
-                      <span className="text-sm font-bold">
-                        {partido.golLocal !== null ? `${partido.golLocal} - ${partido.golVisitante}` : 'vs'}
-                      </span>
+                return (
+                  <div
+                    key={partido.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl transition-colors hover:bg-gray-50/50 gap-4"
+                    style={{
+                      border: '1px solid var(--borde-suave)',
+                      background: partido.estado === 'EN_CURSO' ? 'rgba(39, 174, 96, 0.04)' : 'transparent',
+                    }}
+                  >
+                    {/* Fecha y hora */}
+                    <div className="text-left sm:text-center min-w-[100px]">
+                      <p className="text-xs font-semibold" style={{ color: 'var(--texto-secundario)' }}>
+                        {new Date(partido.fecha_hora).toLocaleDateString('es-EC', { day: 'numeric', month: 'short' })}
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--texto-terciario)' }}>
+                        {new Date(partido.fecha_hora).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                      </p>
                     </div>
-                    <span className="text-sm font-semibold text-left flex-1" style={{ color: 'var(--texto-primario)' }}>
-                      {partido.visitante}
-                    </span>
-                  </div>
 
-                  {/* Estado y estadio */}
-                  <div className="text-right min-w-[120px]">
-                    <span
-                      className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold"
-                      style={{
-                        background: partido.estado === 'FINALIZADO' ? '#E5E7EB' : partido.estado === 'EN_CURSO' ? '#DEF7EC' : '#DBEAFE',
-                        color: partido.estado === 'FINALIZADO' ? '#374151' : partido.estado === 'EN_CURSO' ? '#03543F' : '#1E40AF',
-                      }}
-                    >
-                      {partido.estado === 'FINALIZADO' ? 'Finalizado' : partido.estado === 'EN_CURSO' ? 'En curso' : 'Programado'}
-                    </span>
-                    <p className="text-xs mt-1" style={{ color: 'var(--texto-terciario)' }}>{partido.estadio}</p>
+                    {/* Equipos y marcador */}
+                    <div className="flex items-center gap-4 flex-1 justify-center">
+                      <div className="flex items-center gap-2 flex-1 justify-end">
+                        <span className="text-sm font-semibold text-right hidden md:inline" style={{ color: 'var(--texto-primario)' }}>
+                          {partido.local.nombre}
+                        </span>
+                        <div
+                          className="flex items-center justify-center rounded-full text-xs font-bold flex-shrink-0"
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            background: localColor,
+                            color: localColor === '#FFFFFF' || localColor === '#FFD700' || localColor === '#F1C40F' ? '#1A1A2E' : 'white',
+                            border: localColor === '#FFFFFF' ? '2px solid #E5E7EB' : 'none'
+                          }}
+                          title={partido.local.nombre}
+                        >
+                          {partido.local.abreviatura}
+                        </div>
+                      </div>
+
+                      <div
+                        className="flex items-center justify-center rounded-lg px-3 py-1.5 min-w-[70px]"
+                        style={{
+                          background: partido.estado === 'FINALIZADO' ? 'var(--ligapro-navy)' : 'var(--fondo-principal)',
+                          color: partido.estado === 'FINALIZADO' ? 'white' : 'var(--texto-secundario)',
+                        }}
+                      >
+                        <span className="text-sm font-bold">
+                          {partido.goles_local !== null ? `${partido.goles_local} - ${partido.goles_visitante}` : 'vs'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-1 justify-start">
+                        <div
+                          className="flex items-center justify-center rounded-full text-xs font-bold flex-shrink-0"
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            background: visitanteColor,
+                            color: visitanteColor === '#FFFFFF' || visitanteColor === '#FFD700' || visitanteColor === '#F1C40F' ? '#1A1A2E' : 'white',
+                            border: visitanteColor === '#FFFFFF' ? '2px solid #E5E7EB' : 'none'
+                          }}
+                          title={partido.visitante.nombre}
+                        >
+                          {partido.visitante.abreviatura}
+                        </div>
+                        <span className="text-sm font-semibold text-left hidden md:inline" style={{ color: 'var(--texto-primario)' }}>
+                          {partido.visitante.nombre}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Estado y estadio */}
+                    <div className="text-left sm:text-right min-w-[140px]">
+                      <span
+                        className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold"
+                        style={{
+                          background: config.bg,
+                          color: config.text,
+                        }}
+                      >
+                        {config.label}
+                      </span>
+                      <p className="text-[11px] mt-1" style={{ color: 'var(--texto-terciario)' }}>
+                        {partido.local.estadio?.nombre || 'Por definir'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -477,7 +695,7 @@ export default function PaginaDetalleCompeticion() {
                 </thead>
                 <tbody>
                   {goleadores.map((g, i) => (
-                    <tr key={i} className="transition-colors hover:bg-gray-50" style={{ borderBottom: '1px solid var(--borde-suave)' }}>
+                    <tr key={i} className="transition-colors hover:bg-gray-50/50" style={{ borderBottom: '1px solid var(--borde-suave)' }}>
                       <td className="px-4 py-3">
                         <span
                           className="inline-flex items-center justify-center rounded-full text-xs font-bold"
@@ -538,7 +756,7 @@ export default function PaginaDetalleCompeticion() {
                 </thead>
                 <tbody>
                   {asistidores.map((a, i) => (
-                    <tr key={i} className="transition-colors hover:bg-gray-50" style={{ borderBottom: '1px solid var(--borde-suave)' }}>
+                    <tr key={i} className="transition-colors hover:bg-gray-50/50" style={{ borderBottom: '1px solid var(--borde-suave)' }}>
                       <td className="px-4 py-3">
                         <span
                           className="inline-flex items-center justify-center rounded-full text-xs font-bold"

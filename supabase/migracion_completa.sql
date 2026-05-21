@@ -716,15 +716,15 @@ CREATE POLICY "Escritura autenticada jornadas_fifa" ON jornadas_fifa FOR ALL USI
 CREATE OR REPLACE FUNCTION crear_perfil_usuario()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO perfiles (user_id, nombre_completo, rol)
+  INSERT INTO public.perfiles (user_id, nombre_completo, rol)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'nombre_completo', NEW.email),
-    'DELEGADO_CLUB'
+    'DELEGADO_CLUB'::public.rol_usuario
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER trigger_crear_perfil
 AFTER INSERT ON auth.users

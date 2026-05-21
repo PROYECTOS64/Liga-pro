@@ -5,7 +5,7 @@
 [build.environment]
   NODE_OPTIONS = "--max-old-space-size=12288"
   NEXT_DISABLE_TURBOPACK = "1"
-  NODE_VERSION = "18"
+  NODE_VERSION = "20.9.0"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
