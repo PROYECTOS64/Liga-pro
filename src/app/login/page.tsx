@@ -77,9 +77,17 @@ function LoginContenido() {
       if (mensaje.includes('Invalid login credentials')) {
         setError('Credenciales inválidas. Verifica tu correo y contraseña.');
       } else if (mensaje.includes('Email not confirmed')) {
-        setError('Tu correo no ha sido confirmado. Revisa tu bandeja de entrada.');
-      } else if (mensaje.includes('already registered')) {
-        setError('Este correo ya está registrado. Intenta iniciar sesión.');
+        setError('Tu correo aún no ha sido confirmado. Revisa tu bandeja de entrada y haz clic en el enlace de verificación.');
+      } else if (mensaje.includes('already registered') || mensaje.includes('User already registered')) {
+        setError('Este correo ya está registrado. Intenta iniciar sesión en la pestaña "Iniciar Sesión".');
+      } else if (mensaje.includes('over_email_send_rate_limit') || mensaje.includes('email rate limit exceeded') || mensaje.includes('rate limit')) {
+        setError('Límite de correos alcanzado. Supabase permite máximo 2 registros por hora en el plan gratuito. Espera unos minutos e intenta de nuevo, o usa una cuenta de Google.');
+      } else if (mensaje.includes('Password should be at least')) {
+        setError('La contraseña debe tener al menos 6 caracteres.');
+      } else if (mensaje.includes('Unable to validate email address')) {
+        setError('El formato del correo electrónico no es válido.');
+      } else if (mensaje.includes('email_address_invalid')) {
+        setError('El correo electrónico ingresado no es válido o no está permitido.');
       } else {
         setError(mensaje);
       }
