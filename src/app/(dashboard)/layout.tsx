@@ -92,21 +92,35 @@ export default function DashboardLayout({
     obtenerUsuario();
   }, []);
 
-  const cerrarSesion = async () => {
+  async function cerrarSesion(e?: React.MouseEvent<HTMLButtonElement>) {
+    // Evitamos comportamiento por defecto si existe el evento
+    e?.preventDefault?.();
+
     try {
+      // 1. Limpiamos estados visuales
+      setUsuario(null);
+      setMenuUsuarioAbierto(false);
+
+      // 2. Ejecutamos el cierre en Supabase (solo sesión local)
+      const supabase = crearClienteNavegador();
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) console.warn('Supabase signOut error:', error.message);
+
+      // 3. Destruimos data local
       document.cookie = "mock_session_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       document.cookie = "mock_session_name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      localStorage.clear();
-      sessionStorage.clear();
-      const supabase = crearClienteNavegador();
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      router.replace('/login');
-    }
-  };
+      try { localStorage.clear(); } catch {};
+      try { sessionStorage.clear(); } catch {};
 
+      // 4. Redirección SPA usando router (más fiable en app router)
+      router.replace('/login');
+
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      // En caso extremo, forzamos navegación completa
+      window.location.href = '/login';
+    }
+  }
   return (
     <div className="flex flex-col min-h-screen">
       {/* ============ HEADER PRINCIPAL ============ */}
@@ -302,18 +316,18 @@ export default function DashboardLayout({
                     </Link>
                   </div>
                   <div className="border-t py-1" style={{ borderColor: 'var(--borde-suave)' }}>
-                    <Link
-                      href="/login"
-                      onClick={cerrarSesion}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm w-full text-left transition-colors no-underline"
-                      style={{ color: 'var(--ligapro-red)' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = '#FEE2E2')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      <LogOut size={16} />
-                      Cerrar Sesión
-                    </Link>
-                  </div>
+  <button
+    type="button"
+    onClick={cerrarSesion}
+    className="flex items-center gap-3 px-4 py-2.5 text-sm w-full text-left transition-colors cursor-pointer border-none bg-transparent"
+    style={{ color: 'var(--ligapro-red)' }}
+    onMouseEnter={(e) => (e.currentTarget.style.background = '#FEE2E2')}
+    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+  >
+    <LogOut size={16} />
+    Cerrar Sesión
+  </button>
+</div>
                 </div>
               </>
             )}
