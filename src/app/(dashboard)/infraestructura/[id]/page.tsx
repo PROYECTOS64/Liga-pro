@@ -95,7 +95,7 @@ export default function PaginaDetalleEstadio() {
 
   const actualizarPasabolas = (index: number, campo: keyof Pasabolas, valor: string) => {
     const nuevos = [...pasabolas];
-    (nuevos[index] as Record<string, string | number | null>)[campo] = valor;
+    (nuevos[index] as unknown as Record<string, string | number | null>)[campo] = valor;
     if (campo === 'fechaNacimiento') {
       nuevos[index].edad = calcularEdad(valor);
     }
