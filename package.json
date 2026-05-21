@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "postinstall": "next telemetry disable",
-    "build": "node --max-old-space-size=16384 ./node_modules/.bin/next build",
+    "build": "node --max-old-space-size=16384 node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "eslint"
   },
@@ -32,5 +32,11 @@
   },
   "engines": {
     "node": ">=18 <25"
+  },
+  "overrides": {
+    "resolve": "1.22.12",
+    "eslint-import-resolver-node": {
+      "resolve": "1.22.12"
+    }
   }
 }

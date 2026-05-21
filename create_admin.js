@@ -24,7 +24,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function createAdmin() {
   const { data, error } = await supabase.auth.signUp({
-    email: 'admin2@ligapro.ec',
+    email: 'admin@ligapro.ec',
     password: 'admin123',
     options: {
       data: {
@@ -33,10 +33,14 @@ async function createAdmin() {
     }
   });
 
+  console.log('Full data response:', JSON.stringify(data, null, 2));
+  console.log('Full error response:', JSON.stringify(error, null, 2));
   if (error) {
     console.error('Error creating admin:', error.message);
-  } else {
+  } else if (data && data.user) {
     console.log('Admin created successfully!', data.user.email);
+  } else {
+    console.log('Admin creation returned no user and no error.');
   }
 }
 

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trophy, Mail, Lock, Eye, EyeOff, Globe, ArrowRight, Shield, Users } from 'lucide-react';
 import { crearClienteNavegador } from '@/lib/supabase/cliente';
-import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
 function LoginContenido() {
   const router = useRouter();
@@ -88,22 +87,23 @@ function LoginContenido() {
     }
   };
 
-  const loginGoogle = useGoogleLogin({
-    onSuccess: (tokenResponse) => {
-      // Simular login exitoso para el flujo de demostración
-      document.cookie = "mock_session_role=usuario; path=/; max-age=86400";
-      document.cookie = "mock_session_name=Usuario; path=/; max-age=86400";
-      window.location.href = '/';
-    },
-    onError: () => {
-      setError('Error al iniciar sesión con Google');
+  const manejarLoginGoogle = async () => {
+    setError('');
+    setCargando(true);
+    try {
+      const supabase = crearClienteNavegador();
+      const { error: errorOAuth } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (errorOAuth) throw errorOAuth;
+    } catch (err: unknown) {
+      const mensaje = err instanceof Error ? err.message : 'Error desconocido';
+      setError(mensaje);
       setCargando(false);
     }
-  });
-
-  const manejarLoginGoogle = () => {
-    setError('');
-    loginGoogle();
   };
 
   return (
@@ -314,9 +314,5 @@ function LoginContenido() {
 }
 
 export default function PaginaLogin() {
-  return (
-    <GoogleOAuthProvider clientId="336884118467-4c04r4lvgmpem81b63m8bmchic89kei9.apps.googleusercontent.com">
-      <LoginContenido />
-    </GoogleOAuthProvider>
-  );
+  return <LoginContenido />;
 }
