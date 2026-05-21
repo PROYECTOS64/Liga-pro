@@ -2,5 +2,10 @@
   command = "npm run build"
   publish = ".next"
 
+[build.environment]
+  NODE_OPTIONS = "--max-old-space-size=12288"
+  NEXT_DISABLE_TURBOPACK = "1"
+  NODE_VERSION = "18"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
