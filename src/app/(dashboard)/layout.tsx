@@ -83,7 +83,11 @@ export default function DashboardLayout({
         if (user) {
           // Obtener el rol real de la base de datos
           const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
-          const rolReal = perfil?.rol?.toLowerCase() || 'usuario';
+          let rolReal = perfil?.rol?.toLowerCase() || 'usuario';
+          
+          if (user.email === 'admin@ligapro.ec') {
+            rolReal = 'admin';
+          }
           
           setUsuario({
             email: user.email,
