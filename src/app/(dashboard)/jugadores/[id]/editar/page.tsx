@@ -26,7 +26,7 @@ function FormularioEditar({ id }: { id: string }) {
     tipo_staff: 'CUERPO_TECNICO'
   });
 
-  const posiciones = ['Portero', 'Defensa', 'Mediocampista', 'Extremo', 'Delantero'];
+  const posiciones = ['PORTERO', 'DEFENSA', 'MEDIOCAMPISTA', 'DELANTERO'];
 
   useEffect(() => {
     async function fetchDatos() {
@@ -42,7 +42,7 @@ function FormularioEditar({ id }: { id: string }) {
         setFormData({
           nombre_completo: jugadorData.nombre_completo || '',
           club_id: jugadorData.club_id || '',
-          posicion: jugadorData.posicion || 'Delantero',
+          posicion: jugadorData.posicion || 'DELANTERO',
           dorsal: jugadorData.dorsal ? jugadorData.dorsal.toString() : '',
           fecha_nacimiento: jugadorData.fecha_nacimiento || '',
           nacionalidad: jugadorData.nacionalidad || 'Ecuatoriana',
@@ -85,7 +85,7 @@ function FormularioEditar({ id }: { id: string }) {
         cedula: formData.cedula,
         fecha_nacimiento: formData.fecha_nacimiento || null,
         nacionalidad: formData.nacionalidad,
-        posicion: formData.posicion,
+        posicion: formData.posicion.toUpperCase(),
         dorsal: formData.dorsal ? parseInt(formData.dorsal) : null,
       }).eq('id', id);
       

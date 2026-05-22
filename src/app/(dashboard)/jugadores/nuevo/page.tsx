@@ -29,7 +29,7 @@ function Formulario() {
     tipo_staff: tipo === 'medico' ? 'CUERPO_MEDICO' : 'CUERPO_TECNICO'
   });
 
-  const posiciones = ['Portero', 'Defensa', 'Mediocampista', 'Extremo', 'Delantero'];
+  const posiciones = ['PORTERO', 'DEFENSA', 'MEDIOCAMPISTA', 'DELANTERO'];
 
   useEffect(() => {
     async function fetchClubes() {
@@ -58,7 +58,7 @@ function Formulario() {
         cedula: formData.cedula,
         fecha_nacimiento: formData.fechaNacimiento || null,
         nacionalidad: formData.nacionalidad,
-        posicion: formData.posicion,
+        posicion: formData.posicion.toUpperCase(),
         dorsal: formData.dorsal ? parseInt(formData.dorsal) : null,
       });
       if (error) {
