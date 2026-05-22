@@ -76,7 +76,7 @@ function FormularioEditarClub({ id }: { id: string }) {
 
     setTimeout(() => {
       setExito(false);
-      router.push(`/clubes/${id}`);
+      window.location.href = `/clubes/${id}`;
     }, 1500);
   };
 

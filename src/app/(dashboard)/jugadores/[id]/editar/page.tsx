@@ -114,7 +114,7 @@ function FormularioEditar({ id }: { id: string }) {
 
     setTimeout(() => {
       setExito(false);
-      router.push(`/jugadores/${id}`);
+      window.location.href = `/jugadores/${id}`;
     }, 1500);
   };
 
