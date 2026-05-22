@@ -59,7 +59,6 @@ function FormularioEditarClub({ id }: { id: string }) {
       fundacion: formData.fundacion || null,
       ciudad: formData.ciudad.trim(),
       serie: formData.serie,
-      serie: formData.serie,
       estado_control_economico: formData.estado_control_economico,
       color_principal: formData.color_principal,
     };
