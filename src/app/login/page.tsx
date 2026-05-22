@@ -25,9 +25,6 @@ function LoginContenido() {
       const supabase = crearClienteNavegador();
 
       if (modoRegistro) {
-        if (email === 'admin@ligapro.ec') {
-          throw new Error('No puedes registrar esta cuenta de administrador de prueba.');
-        }
         const { error: errorRegistro } = await supabase.auth.signUp({
           email,
           password: contrasena,
@@ -43,24 +40,6 @@ function LoginContenido() {
         setMensajeExito('¡Cuenta creada exitosamente! Revisa tu correo para confirmar tu cuenta. El enlace de confirmación te llevará directamente al sistema.');
         setModoRegistro(false);
       } else {
-        if (email === 'admin@ligapro.ec' && contrasena === 'admin123') {
-          document.cookie = "mock_session_role=admin; path=/; max-age=86400";
-          document.cookie = "mock_session_name=Administrador; path=/; max-age=86400";
-          router.push('/');
-          router.refresh();
-          return;
-        }
-
-        // Mock users logic
-        const mockUsers = JSON.parse(localStorage.getItem('mock_users') || '[]');
-        const foundUser = mockUsers.find((u: any) => u.username === email && u.password === contrasena);
-        if (foundUser) {
-          document.cookie = `mock_session_role=${foundUser.role}; path=/; max-age=86400`;
-          document.cookie = `mock_session_name=${encodeURIComponent(foundUser.name)}; path=/; max-age=86400`;
-          router.push('/');
-          router.refresh();
-          return;
-        }
 
         const { error: errorLogin } = await supabase.auth.signInWithPassword({
           email,
