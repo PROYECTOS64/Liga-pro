@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { use } from 'react';
 import Link from 'next/link';
 import {
@@ -8,6 +8,7 @@ import {
   FileText, AlertTriangle, ClipboardList, Edit, Hash,
   Trophy, CircleAlert, Shirt
 } from 'lucide-react';
+import { crearClienteNavegador } from '@/lib/supabase/cliente';
 
 // ============================================
 // DATOS DE EJEMPLO
@@ -69,15 +70,58 @@ function Insignia({ estado }: { estado: string }) {
 export default function PaginaDetalleJugador({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [pestanaActiva, setPestanaActiva] = useState('informacion');
+  const [jugadorDB, setJugadorDB] = useState<any>(null);
+  const [cargando, setCargando] = useState(true);
+  const supabase = crearClienteNavegador();
+
+  useEffect(() => {
+    async function fetchJugador() {
+      const { data } = await supabase.from('jugadores').select('*, clubes(nombre)').eq('id', id).single();
+      if (data) {
+        setJugadorDB(data);
+      } else {
+        // Podríamos revisar si es staff, pero por ahora solo jugador
+        const { data: staffData } = await supabase.from('staff').select('*, clubes(nombre)').eq('id', id).single();
+        if (staffData) setJugadorDB(staffData);
+      }
+      setCargando(false);
+    }
+    fetchJugador();
+  }, [id, supabase]);
 
   // Fallback a jugador genérico si no existe en los datos mock
-  const jugador = jugadoresDB[id] || {
+  const fallback = jugadoresDB[id] || {
     id, nombre: 'Jugador Ejemplo', club: 'Barcelona SC', posicion: 'Delantero', dorsal: 9,
     estado: 'ACTIVO', fechaNacimiento: '01/01/1995', nacionalidad: 'Ecuatoriana', cedula: '0900000000',
     telefono: '+593 99 000 0000', email: 'jugador@club.ec', lugarNacimiento: 'Guayaquil',
     peso: '75 kg', estatura: '1.80 m', pieHabil: 'Derecho', fechaRegistro: '01/01/2026',
     partidosJugados: 20, goles: 5, amarillas: 2, rojas: 0,
   };
+
+  const jugador = jugadorDB ? {
+    id: jugadorDB.id,
+    nombre: jugadorDB.nombre_completo,
+    club: jugadorDB.clubes?.nombre || 'Sin club',
+    posicion: jugadorDB.posicion || jugadorDB.tipo_staff || 'Staff',
+    dorsal: jugadorDB.dorsal || 0,
+    estado: jugadorDB.estado || 'ACTIVO',
+    fechaNacimiento: jugadorDB.fecha_nacimiento || fallback.fechaNacimiento,
+    nacionalidad: jugadorDB.nacionalidad || fallback.nacionalidad,
+    cedula: jugadorDB.cedula || fallback.cedula,
+    telefono: fallback.telefono,
+    email: fallback.email,
+    lugarNacimiento: fallback.lugarNacimiento,
+    peso: jugadorDB.peso_kg ? `${jugadorDB.peso_kg} kg` : fallback.peso,
+    estatura: jugadorDB.altura_cm ? `${jugadorDB.altura_cm} cm` : fallback.estatura,
+    pieHabil: jugadorDB.pie_dominante || fallback.pieHabil,
+    fechaRegistro: jugadorDB.created_at ? new Date(jugadorDB.created_at).toLocaleDateString() : fallback.fechaRegistro,
+    partidosJugados: fallback.partidosJugados,
+    goles: fallback.goles,
+    amarillas: jugadorDB.tarjetas_amarillas_acumuladas || fallback.amarillas,
+    rojas: fallback.rojas,
+  } : fallback;
+
+  if (cargando) return <div className="p-10 text-center">Cargando perfil...</div>;
 
   const estadisticas = [
     { titulo: 'Partidos Jugados', valor: jugador.partidosJugados, icono: Trophy, color: '#2980B9', fondo: '#EBF5FF' },
@@ -152,8 +196,9 @@ export default function PaginaDetalleJugador({ params }: { params: Promise<{ id:
               </div>
             </div>
             {/* Botón editar */}
-            <button
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+            <Link
+              href={`/jugadores/${id}/editar`}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-white/20"
               style={{
                 background: 'rgba(255,255,255,0.15)',
                 color: 'white',
@@ -162,7 +207,7 @@ export default function PaginaDetalleJugador({ params }: { params: Promise<{ id:
             >
               <Edit size={14} />
               Editar
-            </button>
+            </Link>
           </div>
         </div>
       </div>

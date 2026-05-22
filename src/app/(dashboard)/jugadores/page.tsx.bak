@@ -8,8 +8,28 @@ import {
   UserCircle, Shield, MoreHorizontal, X, Stethoscope, ClipboardList
 } from 'lucide-react';
 
-import { crearClienteNavegador } from '@/lib/supabase/cliente';
+// ============================================
+// DATOS DE EJEMPLO - Jugadores ecuatorianos
+// ============================================
+const jugadoresData = [
+  { id: '1', nombre: 'Enner Valencia', club: 'Barcelona SC', posicion: 'Delantero', dorsal: 13, estado: 'ACTIVO', foto: null },
+  { id: '2', nombre: 'Ángel Mena', club: 'LDU Quito', posicion: 'Mediocampista', dorsal: 10, estado: 'ACTIVO', foto: null },
+  { id: '3', nombre: 'Gonzalo Plata', club: 'Emelec', posicion: 'Extremo', dorsal: 7, estado: 'ACTIVO', foto: null },
+  { id: '4', nombre: 'Moisés Caicedo', club: 'Independiente del Valle', posicion: 'Mediocampista', dorsal: 8, estado: 'ACTIVO', foto: null },
+  { id: '5', nombre: 'Pervis Estupiñán', club: 'LDU Quito', posicion: 'Defensa', dorsal: 3, estado: 'SUSPENDIDO', foto: null },
+  { id: '6', nombre: 'Piero Hincapié', club: 'Barcelona SC', posicion: 'Defensa', dorsal: 4, estado: 'ACTIVO', foto: null },
+  { id: '7', nombre: 'Carlos Gruezo', club: 'Deportivo Cuenca', posicion: 'Mediocampista', dorsal: 5, estado: 'ACTIVO', foto: null },
+  { id: '8', nombre: 'Alexander Domínguez', club: 'LDU Quito', posicion: 'Portero', dorsal: 1, estado: 'ACTIVO', foto: null },
+  { id: '9', nombre: 'Félix Torres', club: 'Emelec', posicion: 'Defensa', dorsal: 2, estado: 'PENDIENTE', foto: null },
+  { id: '10', nombre: 'Jeremy Sarmiento', club: 'Barcelona SC', posicion: 'Extremo', dorsal: 11, estado: 'ACTIVO', foto: null },
+  { id: '11', nombre: 'Michael Estrada', club: 'El Nacional', posicion: 'Delantero', dorsal: 9, estado: 'ACTIVO', foto: null },
+  { id: '12', nombre: 'Robert Arboleda', club: 'Aucas', posicion: 'Defensa', dorsal: 6, estado: 'ACTIVO', foto: null },
+  { id: '13', nombre: 'Jhegson Méndez', club: 'Mushuc Runa', posicion: 'Mediocampista', dorsal: 14, estado: 'SUSPENDIDO', foto: null },
+  { id: '14', nombre: 'Alan Franco', club: 'Independiente del Valle', posicion: 'Defensa', dorsal: 15, estado: 'ACTIVO', foto: null },
+  { id: '15', nombre: 'Hernán Galíndez', club: 'Deportivo Cuenca', posicion: 'Portero', dorsal: 22, estado: 'PENDIENTE', foto: null },
+];
 
+const clubes = ['Todos', 'Barcelona SC', 'LDU Quito', 'Emelec', 'Independiente del Valle', 'El Nacional', 'Aucas', 'Deportivo Cuenca', 'Mushuc Runa'];
 const estados = ['Todos', 'ACTIVO', 'PENDIENTE', 'SUSPENDIDO'];
 const posiciones = ['Todas', 'Portero', 'Defensa', 'Mediocampista', 'Extremo', 'Delantero'];
 
@@ -43,11 +63,6 @@ function Insignia({ estado }: { estado: string }) {
 }
 
 export default function PaginaJugadores() {
-  const [jugadoresData, setJugadoresData] = useState<any[]>([]);
-  const [clubesList, setClubesList] = useState<string[]>(['Todos']);
-  const [cargando, setCargando] = useState(true);
-  const supabase = crearClienteNavegador();
-
   const [pestanaActiva, setPestanaActiva] = useState('jugadores');
   const [busqueda, setBusqueda] = useState('');
   const [filtroClub, setFiltroClub] = useState('Todos');
@@ -59,79 +74,43 @@ export default function PaginaJugadores() {
   const router = useRouter();
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  const [tecnicos, setTecnicos] = useState<any[]>([]);
-  const [medicos, setMedicos] = useState<any[]>([]);
-
   useEffect(() => {
     const match = document.cookie.match(/(^| )mock_session_role=([^;]+)/);
     if (match) setUserRole(decodeURIComponent(match[2]));
-    fetchDatos();
   }, []);
 
-  const fetchDatos = async () => {
-    setCargando(true);
-    const { data: clubesData } = await supabase.from('clubes').select('nombre');
-    if (clubesData) {
-      setClubesList(['Todos', ...clubesData.map(c => c.nombre)]);
-    }
-
-    const { data: jugData } = await supabase.from('jugadores').select(`
-      *,
-      clubes ( nombre )
-    `);
-    if (jugData) {
-      const formatted = jugData.map(j => ({
-        id: j.id,
-        nombre: j.nombre_completo,
-        club: j.clubes?.nombre || 'Sin Club',
-        posicion: j.posicion,
-        dorsal: j.dorsal,
-        estado: j.estado,
-        foto: j.foto_url
-      }));
-      setJugadoresData(formatted);
-    }
-
-    const { data: staffData } = await supabase.from('staff').select(`
-      *,
-      clubes ( nombre )
-    `);
-    if (staffData) {
-      const tecnicosData = staffData.filter(s => s.tipo_staff === 'CUERPO_TECNICO' || s.is_director_tecnico);
-      const medicosData = staffData.filter(s => s.tipo_staff === 'CUERPO_MEDICO' || s.is_medico);
-      
-      setTecnicos(tecnicosData.map(t => ({ id: t.id, nombre: t.nombre_completo, cargo: t.tipo_staff })));
-      setMedicos(medicosData.map(m => ({ id: m.id, nombre: m.nombre_completo, cargo: m.tipo_staff })));
-    }
-    setCargando(false);
-  };
+  const [tecnicos, setTecnicos] = useState([
+    { id: 1, nombre: 'Sebastián Beccacece', cargo: 'Director Técnico' },
+    { id: 2, nombre: 'Pablo Sánchez', cargo: 'Asistente Técnico' }
+  ]);
+  const [medicos, setMedicos] = useState([
+    { id: 1, nombre: 'Dr. Carlos Medina', cargo: 'Médico Principal' },
+    { id: 2, nombre: 'Lic. María Fernanda Torres', cargo: 'Fisioterapeuta' }
+  ]);
 
   const agregarTecnico = () => {
-    router.push('/jugadores/nuevo?tipo=tecnico');
+    const nombre = prompt('Ingrese el nombre del técnico:');
+    if (!nombre) return;
+    const cargo = prompt('Ingrese el cargo (ej. Director Técnico):') || 'Asistente';
+    setTecnicos([...tecnicos, { id: Date.now(), nombre, cargo }]);
   };
 
-  const eliminarTecnico = async (id: string) => {
+  const eliminarTecnico = (id: number) => {
     if (confirm('¿Desea eliminar este miembro del cuerpo técnico?')) {
-      await supabase.from('staff').delete().eq('id', id);
-      fetchDatos();
+      setTecnicos(tecnicos.filter(t => t.id !== id));
     }
   };
 
   const agregarMedico = () => {
-    router.push('/jugadores/nuevo?tipo=medico');
+    const nombre = prompt('Ingrese el nombre del médico:');
+    if (!nombre) return;
+    const cargo = prompt('Ingrese el cargo (ej. Médico Principal):') || 'Asistente Médico';
+    setMedicos([...medicos, { id: Date.now(), nombre, cargo }]);
   };
 
-  const eliminarMedico = async (id: string) => {
+  const eliminarMedico = (id: number) => {
     if (confirm('¿Desea eliminar este miembro del staff médico?')) {
-      await supabase.from('staff').delete().eq('id', id);
-      fetchDatos();
-    }
-  };
-
-  const eliminarJugador = async (id: string) => {
-    if (confirm('¿Desea eliminar este jugador? Esta acción no se puede deshacer.')) {
-      await supabase.from('jugadores').delete().eq('id', id);
-      fetchDatos();
+      setMedicos(medicos.filter(m => m.id !== id));
     }
   };
 
@@ -369,7 +348,7 @@ export default function PaginaJugadores() {
                     color: 'var(--texto-primario)',
                   }}
                 >
-                  {clubesList.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {clubes.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
@@ -476,23 +455,13 @@ export default function PaginaJugadores() {
                       <Insignia estado={j.estado} />
                     </td>
                     <td className="px-6 py-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Link
-                          href={`/jugadores/${j.id}`}
-                          className="p-2 rounded-lg transition-colors hover:bg-gray-100"
-                          style={{ color: 'var(--texto-secundario)' }}
-                        >
-                          <MoreHorizontal size={18} />
-                        </Link>
-                        {(userRole === 'admin' || userRole === 'club') && (
-                          <button
-                            onClick={() => eliminarJugador(j.id)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                          </button>
-                        )}
-                      </div>
+                      <Link
+                        href={`/jugadores/${j.id}`}
+                        className="p-2 rounded-lg transition-colors inline-flex"
+                        style={{ color: 'var(--texto-secundario)' }}
+                      >
+                        <MoreHorizontal size={18} />
+                      </Link>
                     </td>
                   </tr>
                 ))}
