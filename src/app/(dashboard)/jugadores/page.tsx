@@ -443,7 +443,7 @@ export default function PaginaJugadores() {
                           background: 'linear-gradient(135deg, #1B2A4A, #243558)',
                         }}
                       >
-                        {j.nombre.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                        {j.nombre.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                       </div>
                     </td>
                     <td className="px-6 py-3">
