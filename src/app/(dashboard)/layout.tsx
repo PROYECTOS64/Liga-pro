@@ -81,10 +81,14 @@ export default function DashboardLayout({
         const supabase = crearClienteNavegador();
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          // Obtener el rol real de la base de datos
+          const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
+          const rolReal = perfil?.rol?.toLowerCase() || 'usuario';
+          
           setUsuario({
             email: user.email,
             nombre: user.user_metadata?.nombre_completo || user.email?.split('@')[0] || 'Usuario',
-            role: 'usuario'
+            role: rolReal
           });
         }
       }
