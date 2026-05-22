@@ -172,7 +172,7 @@ export default function PaginaDetalleJugador({ params }: { params: Promise<{ id:
                 border: '3px solid rgba(255,255,255,0.2)',
               }}
             >
-              {jugador.nombre.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+              {jugador.nombre.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
             </div>
             {/* Info */}
             <div className="flex-1">
