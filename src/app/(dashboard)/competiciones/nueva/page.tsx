@@ -34,8 +34,8 @@ export default function PaginaNuevaCompeticion() {
       nombre: formData.nombre.trim(),
       temporada: formData.temporada.trim(),
       serie: formData.serie,
-      fase: formData.fase,
-      equipos_participantes: parseInt(formData.equipos.toString()),
+      fase_actual: formData.fase,
+      num_equipos: parseInt(formData.equipos.toString()),
       fecha_inicio: formData.fechaInicio || null,
       fecha_fin: formData.fechaFin || null,
       estado: 'PLANIFICADA'
