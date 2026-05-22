@@ -64,37 +64,22 @@ export default function DashboardLayout({
 
   useEffect(() => {
     const obtenerUsuario = async () => {
-      const cookies = document.cookie;
-      const getCookie = (name: string) => {
-        const match = cookies.match(new RegExp('(^| )' + name + '=([^;]+)'));
-        return match ? decodeURIComponent(match[2]) : null;
-      };
-
-      const role = getCookie('mock_session_role');
-      const name = getCookie('mock_session_name');
-
-      if (role === 'admin') {
-        setUsuario({ email: 'admin@ligapro.ec', nombre: 'Administrador Principal', role: 'admin' });
-      } else if (role) {
-        setUsuario({ email: '', nombre: name || 'Usuario', role });
-      } else {
-        const supabase = crearClienteNavegador();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Obtener el rol real de la base de datos
-          const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
-          let rolReal = perfil?.rol?.toLowerCase() || 'usuario';
-          
-          if (user.email === 'admin@ligapro.ec') {
-            rolReal = 'admin';
-          }
-          
-          setUsuario({
-            email: user.email,
-            nombre: user.user_metadata?.nombre_completo || user.email?.split('@')[0] || 'Usuario',
-            role: rolReal
-          });
+      const supabase = crearClienteNavegador();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
+        let rolReal = perfil?.rol?.toLowerCase() || 'usuario';
+        
+        if (user.email === 'admin@ligapro.ec') {
+          rolReal = 'admin';
         }
+        
+        setUsuario({
+          email: user.email,
+          nombre: user.user_metadata?.nombre_completo || user.email?.split('@')[0] || 'Usuario',
+          role: rolReal
+        });
       }
     };
     obtenerUsuario();

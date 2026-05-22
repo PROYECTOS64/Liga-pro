@@ -47,7 +47,6 @@ function LoginContenido() {
         });
 
         if (errorLogin) throw errorLogin;
-        document.cookie = "mock_session_role=usuario; path=/; max-age=86400";
         router.push('/');
         router.refresh();
       }
