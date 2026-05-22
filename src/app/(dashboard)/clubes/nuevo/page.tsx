@@ -4,11 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Plus, Shield, MapPin, Building, CheckCircle2 } from 'lucide-react';
+import { crearClienteNavegador } from '@/lib/supabase/cliente';
 
 export default function PaginaNuevoClub() {
   const router = useRouter();
   const [cargando, setCargando] = useState(false);
   const [exito, setExito] = useState(false);
+  const supabase = crearClienteNavegador();
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -26,13 +28,27 @@ export default function PaginaNuevoClub() {
 
   const guardarClub = async () => {
     setCargando(true);
-    // Simular guardado
-    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const { error } = await supabase.from('clubes').insert({
+      nombre: formData.nombre.trim(),
+      abreviatura: formData.abreviatura.toUpperCase().trim(),
+      serie: formData.serie,
+      ciudad: formData.ciudad.trim(),
+      fundacion: formData.fundacion || null,
+      estado_control_economico: 'EN_REVISION'
+    });
+
+    if (error) {
+      alert('Error al registrar club: ' + error.message);
+      setCargando(false);
+      return;
+    }
+
     setCargando(false);
     setExito(true);
 
     setTimeout(() => {
-      router.push('/clubes');
+      window.location.href = '/clubes';
     }, 1500);
   };
 

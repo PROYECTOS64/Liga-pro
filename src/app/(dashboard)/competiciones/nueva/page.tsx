@@ -4,11 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Plus, Trophy, Calendar, Users, CheckCircle2 } from 'lucide-react';
+import { crearClienteNavegador } from '@/lib/supabase/cliente';
 
 export default function PaginaNuevaCompeticion() {
   const router = useRouter();
   const [cargando, setCargando] = useState(false);
   const [exito, setExito] = useState(false);
+  const supabase = crearClienteNavegador();
 
   const [formData, setFormData] = useState({
     nombre: 'Serie A - LigaPro',
@@ -27,13 +29,29 @@ export default function PaginaNuevaCompeticion() {
 
   const guardarCompeticion = async () => {
     setCargando(true);
-    // Simular guardado
-    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const { error } = await supabase.from('competiciones').insert({
+      nombre: formData.nombre.trim(),
+      temporada: formData.temporada.trim(),
+      serie: formData.serie,
+      fase: formData.fase,
+      equipos_participantes: parseInt(formData.equipos.toString()),
+      fecha_inicio: formData.fechaInicio || null,
+      fecha_fin: formData.fechaFin || null,
+      estado: 'PLANIFICADA'
+    });
+
+    if (error) {
+      alert('Error al registrar competición: ' + error.message);
+      setCargando(false);
+      return;
+    }
+
     setCargando(false);
     setExito(true);
 
     setTimeout(() => {
-      router.push('/competiciones');
+      window.location.href = '/competiciones';
     }, 1500);
   };
 

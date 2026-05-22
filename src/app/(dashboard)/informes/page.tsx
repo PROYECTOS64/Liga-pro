@@ -357,12 +357,12 @@ export default function PaginaInformes() {
                 <div className="flex items-center gap-1">
                   <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
                     title="Ver informe"
-                    onClick={() => alert(`Abriendo vista previa de: ${informe.titulo}`)}>
+                    onClick={() => generarPDF({ titulo: informe.titulo, descripcion: `Reporte oficial de tipo: ${informe.tipo}`, colorIcono: '#1B2A4A' })}>
                     <Eye size={14} style={{ color: 'var(--texto-secundario)' }} />
                   </button>
                   <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
                     title="Descargar"
-                    onClick={() => alert(`Descargando PDF de: ${informe.titulo}`)}>
+                    onClick={() => generarPDF({ titulo: informe.titulo, descripcion: `Reporte oficial de tipo: ${informe.tipo}`, colorIcono: '#1B2A4A' })}>
                     <Download size={14} style={{ color: 'var(--texto-secundario)' }} />
                   </button>
                   <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"

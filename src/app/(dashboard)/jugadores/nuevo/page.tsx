@@ -26,7 +26,7 @@ function Formulario() {
     fechaNacimiento: '',
     nacionalidad: 'Ecuatoriana',
     cedula: '',
-    tipo_staff: tipo === 'medico' ? 'CUERPO_MEDICO' : 'CUERPO_TECNICO'
+    tipo_staff: tipo === 'medico' ? 'MEDICO' : 'DIRECTOR_TECNICO'
   });
 
   const posiciones = ['PORTERO', 'DEFENSA', 'MEDIOCAMPISTA', 'DELANTERO'];
@@ -54,7 +54,7 @@ function Formulario() {
     if (tipo === 'jugador') {
       const { error } = await supabase.from('jugadores').insert({
         nombre_completo: `${formData.nombre} ${formData.apellidos}`.trim(),
-        club_id: formData.club_id,
+        club_id: formData.club_id || null,
         cedula: formData.cedula,
         fecha_nacimiento: formData.fechaNacimiento || null,
         nacionalidad: formData.nacionalidad,
@@ -69,7 +69,7 @@ function Formulario() {
     } else {
       const { error } = await supabase.from('staff').insert({
         nombre_completo: `${formData.nombre} ${formData.apellidos}`.trim(),
-        club_id: formData.club_id,
+        club_id: formData.club_id || null,
         cedula: formData.cedula,
         tipo_staff: formData.tipo_staff,
         is_medico: tipo === 'medico',
