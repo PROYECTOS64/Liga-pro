@@ -154,7 +154,7 @@ export default function PaginaJugadores() {
       const coincidePosicion = filtroPosicion === 'Todas' || j.posicion === filtroPosicion;
       return coincideBusqueda && coincideClub && coincideEstado && coincidePosicion;
     });
-  }, [busqueda, filtroClub, filtroEstado, filtroPosicion]);
+  }, [busqueda, filtroClub, filtroEstado, filtroPosicion, jugadoresData]);
 
   const totalPaginas = Math.ceil(jugadoresFiltrados.length / elementosPorPagina);
   const jugadoresPagina = jugadoresFiltrados.slice(
