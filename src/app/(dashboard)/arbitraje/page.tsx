@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, AlertTriangle, CheckCircle2, Search, Filter } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle2, Search, Filter, PenLine } from 'lucide-react';
+import ModalAsignacionArbitral from '@/components/ModalAsignacionArbitral';
 
 export default function PaginaArbitraje() {
   const [partidos, setPartidos] = useState<any[]>([]);
   const [arbitros, setArbitros] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [partidoSeleccionado, setPartidoSeleccionado] = useState<any>(null);
 
-  useEffect(() => {
-    async function fetchData() {
+  const fetchData = async () => {
       const supabase = await import('@/lib/supabase/cliente').then(m => m.crearClienteNavegador());
       
       const [resPartidos, resArbitros] = await Promise.all([
@@ -46,15 +48,33 @@ export default function PaginaArbitraje() {
       }
 
       setCargando(false);
-    }
+    };
+
+  useEffect(() => {
     fetchData();
   }, []);
+
+  const handleAbrirModal = (partido: any) => {
+    setPartidoSeleccionado(partido);
+    setModalAbierto(true);
+  };
+
+  const handleCerrarModal = () => {
+    setModalAbierto(false);
+    setPartidoSeleccionado(null);
+  };
+
+  const handleGuardado = () => {
+    handleCerrarModal();
+    // Recargar toda la info para que aparezcan los nuevos arbitros
+    fetchData();
+  };
 
   return (
     <div className="space-y-6 max-w-[1440px] mx-auto">
       <div>
         <h1 className="text-2xl font-bold" style={{ color: 'var(--texto-primario)' }}>
-          Asignación de Árbitros (Fase 4)
+          Asignación de Árbitros
         </h1>
         <p className="text-sm mt-1" style={{ color: 'var(--texto-secundario)' }}>
           Gestión de asignaciones arbitrales y verificación de reglas (rotación, categoría, VAR).
@@ -70,6 +90,7 @@ export default function PaginaArbitraje() {
                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--texto-secundario)' }}>Partido</th>
                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--texto-secundario)' }}>Fecha</th>
                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--texto-secundario)' }}>Cuerpo Arbitral Asignado</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right" style={{ color: 'var(--texto-secundario)' }}>Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--borde-suave)' }}>
@@ -98,12 +119,32 @@ export default function PaginaArbitraje() {
                       <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-semibold">Sin asignaciones</span>
                     )}
                   </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() => handleAbrirModal(p)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all hover:-translate-y-0.5 shadow-sm hover:shadow-md"
+                      style={{ background: 'linear-gradient(135deg, #2980B9, #1A5276)' }}
+                    >
+                      <PenLine size={14} />
+                      Asignar / Editar
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {modalAbierto && (
+        <ModalAsignacionArbitral
+          isOpen={modalAbierto}
+          onClose={handleCerrarModal}
+          partido={partidoSeleccionado}
+          arbitros={arbitros}
+          onGuardado={handleGuardado}
+        />
+      )}
     </div>
   );
 }
