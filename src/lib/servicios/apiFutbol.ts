@@ -1,29 +1,25 @@
 import { crearClienteNavegador } from '@/lib/supabase/cliente';
 
-const LIGA_ECUADOR_ID = 242; // ID de la LigaPro en API-Football
-const TEMPORADA_ACTUAL = new Date().getFullYear();
+const LIGA_ECUADOR_ID = 4686; // ID de la Serie A de Ecuador en TheSportsDB
+const TEMPORADA_ACTUAL = 2024; // Usaremos 2024 que es la última completa/activa registrada en TheSportsDB gratuita
 
-// Mapeo de estados de la API a los ENUMs de nuestra BD
-function mapearEstado(statusLong: string) {
-  switch (statusLong) {
+// Mapeo de estados de TheSportsDB a los ENUMs de nuestra BD
+function mapearEstado(status: string) {
+  switch (status) {
+    case 'NS':
     case 'Not Started':
-    case 'Time to be defined':
       return 'PROGRAMADO';
+    case 'FT':
+    case 'AET':
+    case 'PEN':
     case 'Match Finished':
-    case 'Finished After Extra Time':
-    case 'Finished After Penalty':
       return 'FINALIZADO';
-    case 'First Half':
-    case 'Kick Off':
-    case 'Halftime':
-    case 'Second Half':
-    case 'Extra Time':
-    case 'Penalty In Progress':
+    case 'HT':
+    case '1H':
+    case '2H':
       return 'EN_CURSO';
-    case 'Match Postponed':
-    case 'Match Cancelled':
-    case 'Match Suspended':
-    case 'Match Interrupted':
+    case 'PST':
+    case 'CANC':
       return 'SUSPENDIDO';
     default:
       return 'PROGRAMADO';
@@ -47,56 +43,31 @@ export const sincronizarPartidos = async () => {
   }
   const competicionId = competicionesDB[0].id;
 
-  // 3. Obtener datos de la API
-  const url = `https://api-football-v1.p.rapidapi.com/v3/fixtures?league=${LIGA_ECUADOR_ID}&season=${TEMPORADA_ACTUAL}`;
-  const opciones = {
-    method: 'GET',
-    headers: {
-      'x-rapidapi-key': process.env.NEXT_PUBLIC_RAPIDAPI_KEY || '',
-      'x-rapidapi-host': 'api-football-v1.p.rapidapi.com'
-    }
-  };
-
+  // 3. Obtener datos de la API (TheSportsDB es 100% gratuita y no requiere API Key)
+  const url = `https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=${LIGA_ECUADOR_ID}&s=${TEMPORADA_ACTUAL}`;
+  
   try {
-    // === MOCK MODE: Simulación de API-Football ===
-    // Ya que hubo problemas obteniendo la llave, inyectamos datos de prueba directamente
-    const datos = {
-      response: [
-        {
-          fixture: { id: 9001, date: new Date(Date.now() + 86400000).toISOString(), status: { long: 'Not Started' }, venue: { name: 'Estadio Rodrigo Paz Delgado' } },
-          teams: { home: { name: 'LDU Quito' }, away: { name: 'Barcelona SC' } },
-          goals: { home: 0, away: 0 },
-          league: { round: 'Regular Season - 16' }
-        },
-        {
-          fixture: { id: 9002, date: new Date(Date.now() + 172800000).toISOString(), status: { long: 'Not Started' }, venue: { name: 'Estadio George Capwell' } },
-          teams: { home: { name: 'Emelec' }, away: { name: 'Independiente del Valle' } },
-          goals: { home: 0, away: 0 },
-          league: { round: 'Regular Season - 16' }
-        },
-        {
-          fixture: { id: 9003, date: new Date(Date.now() + 259200000).toISOString(), status: { long: 'Not Started' }, venue: { name: 'Estadio Olímpico Atahualpa' } },
-          teams: { home: { name: 'El Nacional' }, away: { name: 'Aucas' } },
-          goals: { home: 0, away: 0 },
-          league: { round: 'Regular Season - 16' }
-        }
-      ]
-    };
+    const respuesta = await fetch(url);
+    const datos = await respuesta.json();
+
+    if (!datos.events || datos.events.length === 0) {
+      throw new Error("No hay datos de la API o la respuesta está vacía");
+    }
 
     // 4. Formatear y preparar para inserción
     const partidosAInsertar: any[] = [];
 
-    for (const item of datos.response) {
-      const fix = item.fixture;
-      const apiId = fix.id;
-      const estadoApi = fix.status.long;
-      const equipoLocalApi = item.teams.home.name;
-      const equipoVisitanteApi = item.teams.away.name;
-      const golesLocal = item.goals.home;
-      const golesVisitante = item.goals.away;
+    for (const item of datos.events) {
+      const apiId = parseInt(item.idEvent);
+      const estadoApi = item.strStatus;
+      const equipoLocalApi = item.strHomeTeam;
+      const equipoVisitanteApi = item.strAwayTeam;
+      const golesLocal = item.intHomeScore !== null ? parseInt(item.intHomeScore) : 0;
+      const golesVisitante = item.intAwayScore !== null ? parseInt(item.intAwayScore) : 0;
       
       // Buscar match de club (búsqueda flexible)
       const buscarClub = (nombreApi: string) => {
+        if (!nombreApi) return undefined;
         const lowerApi = nombreApi.toLowerCase();
         return clubesDB.find(c => 
           c.nombre.toLowerCase().includes(lowerApi) || 
@@ -109,35 +80,32 @@ export const sincronizarPartidos = async () => {
       const clubVisitante = buscarClub(equipoVisitanteApi);
 
       if (!clubLocal || !clubVisitante) {
-        console.warn(`No se encontró match para los clubes: ${equipoLocalApi} vs ${equipoVisitanteApi}`);
-        continue; // Saltamos este partido si no identificamos a los equipos en nuestra BD
+        // Saltamos este partido si no identificamos a los equipos en nuestra BD
+        continue; 
       }
 
-      // Determinar jornada (La API devuelve ej. "Regular Season - 1")
-      let jornada = 1;
-      const matchJornada = item.league.round.match(/\d+/);
-      if (matchJornada) jornada = parseInt(matchJornada[0], 10);
+      // Determinar jornada
+      const jornada = item.intRound ? parseInt(item.intRound) : 1;
 
       partidosAInsertar.push({
         api_id: apiId,
         competicion_id: competicionId,
         club_local_id: clubLocal.id,
         club_visitante_id: clubVisitante.id,
-        fecha_hora: fix.date,
+        fecha_hora: item.strTimestamp || item.dateEvent,
         estado: mapearEstado(estadoApi),
-        goles_local: golesLocal !== null ? golesLocal : 0,
-        goles_visitante: golesVisitante !== null ? golesVisitante : 0,
+        goles_local: golesLocal,
+        goles_visitante: golesVisitante,
         jornada: jornada,
-        fase: 'FASE_1', // Por defecto a FASE_1, se podría hacer más complejo si se requiere
+        fase: 'FASE_1', // Por defecto a FASE_1
       });
     }
 
     if (partidosAInsertar.length === 0) {
-      return { exito: false, error: 'Ningún partido de prueba pudo ser emparejado con los clubes de la BD' };
+      return { exito: false, error: 'Ningún partido pudo ser emparejado con los clubes de la BD' };
     }
 
     // 5. Inserción Masiva (Upsert)
-    // Se requiere que api_id sea un campo UNIQUE en la tabla partidos
     const { error: upsertError } = await supabase
       .from('partidos')
       .upsert(partidosAInsertar, { onConflict: 'api_id' });
@@ -146,12 +114,12 @@ export const sincronizarPartidos = async () => {
 
     return { 
       exito: true, 
-      mensaje: `¡MOCK EXITOSO! Se sincronizaron correctamente ${partidosAInsertar.length} partidos de prueba (LDU vs BSC, Emelec vs IDV, El Nacional vs Aucas).`,
+      mensaje: `¡ÉXITO CON THESPORTSDB! Se sincronizaron correctamente ${partidosAInsertar.length} partidos.`,
       cantidad: partidosAInsertar.length
     };
 
   } catch (error: any) {
-    console.error("Error al sincronizar partidos (Mock):", error);
+    console.error("Error al consumir TheSportsDB:", error);
     return { exito: false, error: error.message };
   }
 };
