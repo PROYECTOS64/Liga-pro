@@ -70,7 +70,19 @@ export default function DashboardLayout({
       
       if (user) {
         const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
-        let rolReal = perfil?.rol?.toLowerCase() || 'usuario';
+        
+        let rolReal = 'usuario';
+        if (perfil?.rol === 'ADMIN') {
+          rolReal = 'admin';
+        } else if (perfil?.rol === 'DELEGADO_CLUB') {
+          rolReal = 'club';
+        } else if (perfil?.rol === 'ARBITRO') {
+          rolReal = 'arbitro';
+        } else if (perfil?.rol === 'COMISARIO') {
+          rolReal = 'comisario';
+        } else if (perfil?.rol === 'CONTROL_ECONOMICO') {
+          rolReal = 'control_economico';
+        }
         
         if (user.email === 'admin@ligapro.ec') {
           rolReal = 'admin';
@@ -181,10 +193,12 @@ export default function DashboardLayout({
         {/* Navegación principal */}
         <nav className="hidden lg:flex items-center gap-1">
           {enlacesNav.filter((enlace) => {
-             if (usuario?.role === 'usuario') return ['/', '/competiciones', '/clubes', '/jugadores'].includes(enlace.href);
-             if (usuario?.role === 'arbitro') return ['/', '/competiciones', '/clubes'].includes(enlace.href);
-             if (usuario?.role === 'club') return ['/', '/competiciones', '/clubes', '/jugadores'].includes(enlace.href);
-             return true;
+             if (!usuario) return ['/', '/competiciones'].includes(enlace.href);
+             if (usuario.role === 'usuario') return ['/', '/competiciones', '/clubes', '/jugadores'].includes(enlace.href);
+             if (usuario.role === 'arbitro') return ['/', '/competiciones', '/clubes'].includes(enlace.href);
+             if (usuario.role === 'club') return ['/', '/competiciones', '/clubes', '/jugadores'].includes(enlace.href);
+             if (usuario.role === 'admin') return true;
+             return ['/', '/competiciones'].includes(enlace.href);
           }).map((enlace) => {
             const esActivo = pathname === enlace.href ||
               (enlace.href !== '/' && pathname.startsWith(enlace.href));
@@ -393,10 +407,12 @@ export default function DashboardLayout({
           {sidebarAbierta && (
             <nav className="px-3 pb-6">
               {enlacesSidebar.filter(seccion => {
-                if (usuario?.role === 'usuario') return seccion.seccion === 'Gestión de Campeonato';
-                if (usuario?.role === 'arbitro') return seccion.seccion === 'Operaciones' || seccion.seccion === 'Gestión de Campeonato';
-                if (usuario?.role === 'club') return seccion.seccion === 'Gestión de Campeonato' || seccion.seccion === 'Operaciones';
-                return true;
+                if (!usuario) return seccion.seccion === 'Gestión de Campeonato';
+                if (usuario.role === 'usuario') return seccion.seccion === 'Gestión de Campeonato';
+                if (usuario.role === 'arbitro') return seccion.seccion === 'Operaciones' || seccion.seccion === 'Gestión de Campeonato';
+                if (usuario.role === 'club') return seccion.seccion === 'Gestión de Campeonato' || seccion.seccion === 'Operaciones';
+                if (usuario.role === 'admin') return true;
+                return seccion.seccion === 'Gestión de Campeonato';
               }).map((seccion) => (
                 <div key={seccion.seccion} className="mb-5">
                   <h3
@@ -407,10 +423,12 @@ export default function DashboardLayout({
                   </h3>
                   <ul className="space-y-0.5 list-none p-0 m-0">
                     {seccion.items.filter(item => {
-                       if (usuario?.role === 'usuario') return ['/competiciones', '/competiciones/fixture'].includes(item.href);
-                       if (usuario?.role === 'arbitro') return ['/competiciones', '/competiciones/fixture', '/planillas', '/disciplinario'].includes(item.href);
-                       if (usuario?.role === 'club') return ['/competiciones', '/competiciones/fixture', '/jugadores'].includes(item.href);
-                       return true;
+                       if (!usuario) return ['/competiciones', '/competiciones/fixture'].includes(item.href);
+                       if (usuario.role === 'usuario') return ['/competiciones', '/competiciones/fixture'].includes(item.href);
+                       if (usuario.role === 'arbitro') return ['/competiciones', '/competiciones/fixture', '/planillas', '/disciplinario'].includes(item.href);
+                       if (usuario.role === 'club') return ['/competiciones', '/competiciones/fixture', '/jugadores'].includes(item.href);
+                       if (usuario.role === 'admin') return true;
+                       return ['/competiciones', '/competiciones/fixture'].includes(item.href);
                     }).map((item) => {
                       const Icono = item.icono;
                       const esActivo = pathname === item.href ||

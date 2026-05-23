@@ -70,7 +70,11 @@ export default function PaginaJugadores() {
            setUserRole('admin');
         } else {
            const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
-           setUserRole(perfil?.rol?.toLowerCase() || 'usuario');
+           let rolReal = 'usuario';
+           if (perfil?.rol === 'ADMIN') rolReal = 'admin';
+           else if (perfil?.rol === 'DELEGADO_CLUB') rolReal = 'club';
+           else if (perfil?.rol === 'ARBITRO') rolReal = 'arbitro';
+           setUserRole(rolReal);
         }
       }
     };
