@@ -5,8 +5,9 @@ import Link from 'next/link';
 import {
   Landmark, MapPin, Users, Leaf, Search, Filter,
   CheckCircle2, XCircle, Building2, ChevronRight,
-  Plus, Download
+  Plus, Download, PenLine
 } from 'lucide-react';
+import ModalEstadio, { EstadioForm } from '@/components/ModalEstadio';
 
 export default function PaginaEstadios() {
   const [busqueda, setBusqueda] = useState('');
@@ -15,6 +16,26 @@ export default function PaginaEstadios() {
   const [estadios, setEstadios] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Estados para el Modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [estadioAEditar, setEstadioAEditar] = useState<EstadioForm | null>(null);
+
+  const fetchEstadios = async () => {
+    const supabase = await import('@/lib/supabase/cliente').then(m => m.crearClienteNavegador());
+    const { data } = await supabase
+      .from('estadios')
+      .select(`
+        *,
+        clubes(nombre)
+      `)
+      .order('nombre', { ascending: true });
+
+    if (data) {
+      setEstadios(data);
+    }
+    setCargando(false);
+  };
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -30,24 +51,31 @@ export default function PaginaEstadios() {
       }
     };
     fetchUserRole();
-
-    async function fetchEstadios() {
-      const supabase = await import('@/lib/supabase/cliente').then(m => m.crearClienteNavegador());
-      const { data } = await supabase
-        .from('estadios')
-        .select(`
-          *,
-          clubes(nombre)
-        `)
-        .order('nombre', { ascending: true });
-
-      if (data) {
-        setEstadios(data);
-      }
-      setCargando(false);
-    }
     fetchEstadios();
   }, []);
+
+  const handleNuevoEstadio = () => {
+    setEstadioAEditar(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditarEstadio = (e: React.MouseEvent, estadio: any) => {
+    e.preventDefault();
+    setEstadioAEditar({
+      id: estadio.id,
+      nombre: estadio.nombre,
+      ciudad: estadio.ciudad,
+      capacidad: estadio.capacidad,
+      tipo_cesped: estadio.tipo_cesped,
+      is_habilitado: estadio.is_habilitado,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleModalGuardado = () => {
+    setIsModalOpen(false);
+    fetchEstadios(); // Recargar la lista
+  };
 
   const estadiosFiltrados = estadios.filter((e) => {
     const coincideBusqueda =
@@ -91,6 +119,7 @@ export default function PaginaEstadios() {
           </button>
           {userRole === 'admin' && (
             <button
+              onClick={handleNuevoEstadio}
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white transition-all"
               style={{ background: 'linear-gradient(135deg, #2980B9, #1F6691)' }}
             >
@@ -253,10 +282,20 @@ export default function PaginaEstadios() {
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'var(--borde-suave)' }}>
-                  <span className="text-xs font-medium" style={{ color: 'var(--ligapro-blue)' }}>
-                    Ver detalles
+                  {userRole === 'admin' ? (
+                    <button 
+                      onClick={(e) => handleEditarEstadio(e, estadio)}
+                      className="flex items-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-md transition-colors" 
+                      style={{ color: '#D4A843', background: 'rgba(212, 168, 67, 0.1)' }}
+                    >
+                      <PenLine size={14} /> Editar
+                    </button>
+                  ) : (
+                    <span className="text-xs text-transparent">Espacio</span>
+                  )}
+                  <span className="flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ligapro-blue)' }}>
+                    Ver Checklist <ChevronRight size={14} />
                   </span>
-                  <ChevronRight size={14} style={{ color: 'var(--ligapro-blue)' }} />
                 </div>
               </div>
             </div>
@@ -276,6 +315,13 @@ export default function PaginaEstadios() {
           </p>
         </div>
       )}
+      {/* Modal */}
+      <ModalEstadio 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSaved={handleModalGuardado}
+        estadioAEditar={estadioAEditar}
+      />
     </div>
   );
 }

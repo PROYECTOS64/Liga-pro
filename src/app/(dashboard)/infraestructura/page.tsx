@@ -1,138 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ClipboardCheck, MapPin, Building2, Leaf, ShieldCheck,
   ShieldAlert, CalendarCheck, Ruler, Search, Filter,
   ChevronRight, CheckCircle2, XCircle, AlertTriangle
 } from 'lucide-react';
+import { crearClienteNavegador } from '@/lib/supabase/cliente';
 
-// ============================================
-// DATOS DE EJEMPLO - 10 ESTADIOS ECUATORIANOS
-// ============================================
-const estadiosData = [
-  {
-    id: 'monumental',
-    nombre: 'Estadio Monumental Banco Pichincha',
-    ciudad: 'Guayaquil',
-    club: 'Barcelona SC',
-    tipoCesped: 'Natural',
-    certificadoFIFA: 'vigente',
-    fechaVencimientoFIFA: '2027-03-15',
-    ultimaInspeccion: '2026-04-10',
-    alturaCesped: 22,
-    capacidad: 59283,
-  },
-  {
-    id: 'rodrigo-paz',
-    nombre: 'Estadio Rodrigo Paz Delgado',
-    ciudad: 'Quito',
-    club: 'LDU Quito',
-    tipoCesped: 'Natural',
-    certificadoFIFA: 'vigente',
-    fechaVencimientoFIFA: '2026-12-01',
-    ultimaInspeccion: '2026-05-02',
-    alturaCesped: 23,
-    capacidad: 41575,
-  },
-  {
-    id: 'george-capwell',
-    nombre: 'Estadio George Capwell',
-    ciudad: 'Guayaquil',
-    club: 'Emelec',
-    tipoCesped: 'Natural',
-    certificadoFIFA: 'vigente',
-    fechaVencimientoFIFA: '2026-08-20',
-    ultimaInspeccion: '2026-03-28',
-    alturaCesped: 21,
-    capacidad: 40000,
-  },
-  {
-    id: 'atahualpa',
-    nombre: 'Estadio Olímpico Atahualpa',
-    ciudad: 'Quito',
-    club: 'El Nacional / Varios',
-    tipoCesped: 'Natural',
-    certificadoFIFA: 'expirado',
-    fechaVencimientoFIFA: '2025-11-30',
-    ultimaInspeccion: '2026-01-15',
-    alturaCesped: 27,
-    capacidad: 35258,
-  },
-  {
-    id: 'gonzalo-pozo',
-    nombre: 'Estadio Gonzalo Pozo Ripalda',
-    ciudad: 'Quito',
-    club: 'Aucas',
-    tipoCesped: 'Sintético',
-    certificadoFIFA: 'vigente',
-    fechaVencimientoFIFA: '2027-01-10',
-    ultimaInspeccion: '2026-04-22',
-    alturaCesped: 20,
-    capacidad: 19731,
-  },
-  {
-    id: 'christian-benitez',
-    nombre: 'Estadio Christian Benítez',
-    ciudad: 'Guayaquil',
-    club: 'Guayaquil City',
-    tipoCesped: 'Natural',
-    certificadoFIFA: 'expirado',
-    fechaVencimientoFIFA: '2025-06-30',
-    ultimaInspeccion: '2025-12-01',
-    alturaCesped: 26,
-    capacidad: 14000,
-  },
-  {
-    id: 'alejandro-serrano',
-    nombre: 'Estadio Alejandro Serrano Aguilar',
-    ciudad: 'Cuenca',
-    club: 'Deportivo Cuenca',
-    tipoCesped: 'Natural',
-    certificadoFIFA: 'vigente',
-    fechaVencimientoFIFA: '2026-09-15',
-    ultimaInspeccion: '2026-05-08',
-    alturaCesped: 24,
-    capacidad: 23456,
-  },
-  {
-    id: 'jocay',
-    nombre: 'Estadio Jocay',
-    ciudad: 'Manta',
-    club: 'Delfín SC',
-    tipoCesped: 'Sintético',
-    certificadoFIFA: 'vigente',
-    fechaVencimientoFIFA: '2027-02-28',
-    ultimaInspeccion: '2026-04-30',
-    alturaCesped: 21,
-    capacidad: 18000,
-  },
-  {
-    id: 'bellavista',
-    nombre: 'Estadio de Liga Bellavista',
-    ciudad: 'Ambato',
-    club: 'Mushuc Runa',
-    tipoCesped: 'Natural',
-    certificadoFIFA: 'expirado',
-    fechaVencimientoFIFA: '2025-09-01',
-    ultimaInspeccion: '2025-10-20',
-    alturaCesped: 28,
-    capacidad: 12000,
-  },
-  {
-    id: 'rumiñahui',
-    nombre: 'Estadio Rumiñahui',
-    ciudad: 'Sangolquí',
-    club: 'Independiente del Valle',
-    tipoCesped: 'Natural',
-    certificadoFIFA: 'vigente',
-    fechaVencimientoFIFA: '2027-06-30',
-    ultimaInspeccion: '2026-05-15',
-    alturaCesped: 22,
-    capacidad: 12000,
-  },
-];
+interface Estadio {
+  id: string;
+  nombre: string;
+  ciudad: string;
+  club: string; // no lo tenemos en DB como club directamente, pero en DB dice 'clubes' en relacion? la tabla estadios no tiene club_id. Lo dejaremos fijo o N/A.
+  tipo_cesped: string;
+  certificado_fifa_url?: string | null;
+  certificado_vigencia?: string | null;
+  altura_cesped?: number; // lo sacaremos de la última inspección si la hay, por ahora default.
+  capacidad: number;
+}
 
 // Componente de insignia de certificación
 function InsigniaFIFA({ estado }: { estado: string }) {
@@ -182,20 +69,43 @@ function IndicadorAltura({ altura }: { altura: number }) {
 export default function PaginaInfraestructura() {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'vigente' | 'expirado'>('todos');
+  const [estadiosData, setEstadiosData] = useState<Estadio[]>([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    async function cargarEstadios() {
+      const supabase = crearClienteNavegador();
+      const { data, error } = await supabase.from('estadios').select('*').order('nombre');
+      if (data) {
+        setEstadiosData(data as any);
+      }
+      setCargando(false);
+    }
+    cargarEstadios();
+  }, []);
+
+  const getEstadoCertificado = (vigencia: string | null | undefined) => {
+    if (!vigencia) return 'expirado';
+    const esVigente = new Date(vigencia) >= new Date();
+    return esVigente ? 'vigente' : 'expirado';
+  };
 
   const estadiosFiltrados = estadiosData.filter((e) => {
     const coincideBusqueda =
-      e.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      e.ciudad.toLowerCase().includes(busqueda.toLowerCase()) ||
-      e.club.toLowerCase().includes(busqueda.toLowerCase());
+      e.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      e.ciudad?.toLowerCase().includes(busqueda.toLowerCase());
+    
+    const estado = getEstadoCertificado(e.certificado_vigencia);
     const coincideFiltro =
-      filtroEstado === 'todos' || e.certificadoFIFA === filtroEstado;
+      filtroEstado === 'todos' || estado === filtroEstado;
     return coincideBusqueda && coincideFiltro;
   });
 
-  const totalVigentes = estadiosData.filter(e => e.certificadoFIFA === 'vigente').length;
-  const totalExpirados = estadiosData.filter(e => e.certificadoFIFA === 'expirado').length;
-  const totalFueraRango = estadiosData.filter(e => e.alturaCesped < 20 || e.alturaCesped > 25).length;
+  const totalVigentes = estadiosData.filter(e => getEstadoCertificado(e.certificado_vigencia) === 'vigente').length;
+  const totalExpirados = estadiosData.filter(e => getEstadoCertificado(e.certificado_vigencia) === 'expirado').length;
+  const totalFueraRango = estadiosData.filter(e => (e.altura_cesped || 22) < 20 || (e.altura_cesped || 22) > 25).length;
+
+  if (cargando) return <div className="p-8 text-center text-white">Cargando estadios...</div>;
 
   return (
     <div className="space-y-6 max-w-[1440px] mx-auto">
@@ -302,7 +212,7 @@ export default function PaginaInfraestructura() {
               <div
                 className="px-5 py-3.5 flex items-center justify-between"
                 style={{
-                  background: estadio.certificadoFIFA === 'vigente'
+                  background: (estadio.certificado_vigencia || '') >= new Date().toISOString().split('T')[0]
                     ? 'linear-gradient(135deg, #27AE60, #1E8449)'
                     : 'linear-gradient(135deg, #C0392B, #96281B)',
                 }}
@@ -330,19 +240,19 @@ export default function PaginaInfraestructura() {
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Leaf size={14} style={{ color: 'var(--texto-terciario)' }} />
-                    <span style={{ color: 'var(--texto-secundario)' }}>Césped {estadio.tipoCesped}</span>
+                    <span style={{ color: 'var(--texto-secundario)' }}>Césped {estadio.tipo_cesped || 'Natural'}</span>
                   </div>
                 </div>
 
                 {/* Certificado FIFA */}
                 <div className="flex items-center justify-between">
-                  <InsigniaFIFA estado={estadio.certificadoFIFA} />
+                  <InsigniaFIFA estado={getEstadoCertificado(estadio.certificado_vigencia)} />
                 </div>
 
                 {/* Última inspección */}
                 <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--texto-terciario)' }}>
                   <CalendarCheck size={13} />
-                  <span>Última inspección: {new Date(estadio.ultimaInspeccion).toLocaleDateString('es-EC')}</span>
+                  <span>Certificado Vigencia: {estadio.certificado_vigencia ? new Date(estadio.certificado_vigencia).toLocaleDateString('es-EC') : 'No registrado'}</span>
                 </div>
 
                 {/* Indicador de altura de césped */}
@@ -353,7 +263,7 @@ export default function PaginaInfraestructura() {
                       Altura del Césped (20-25mm)
                     </span>
                   </div>
-                  <IndicadorAltura altura={estadio.alturaCesped} />
+                  <IndicadorAltura altura={estadio.altura_cesped || 22} />
                 </div>
 
                 {/* Botón ver checklist */}

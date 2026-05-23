@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -9,30 +9,18 @@ import {
   AlertTriangle, ClipboardCheck, User, Calendar, Hash,
   Sprout, PenLine
 } from 'lucide-react';
+import { crearClienteNavegador } from '@/lib/supabase/cliente';
 
-// ============================================
-// DATOS DE EJEMPLO
-// ============================================
-const estadiosDetalle: Record<string, {
+interface Estadio {
+  id: string;
   nombre: string;
   ciudad: string;
-  club: string;
   capacidad: number;
-  tipoCesped: string;
-}> = {
-  monumental: { nombre: 'Estadio Monumental Banco Pichincha', ciudad: 'Guayaquil', club: 'Barcelona SC', capacidad: 59283, tipoCesped: 'Natural' },
-  'rodrigo-paz': { nombre: 'Estadio Rodrigo Paz Delgado', ciudad: 'Quito', club: 'LDU Quito', capacidad: 41575, tipoCesped: 'Natural' },
-  'george-capwell': { nombre: 'Estadio George Capwell', ciudad: 'Guayaquil', club: 'Emelec', capacidad: 40000, tipoCesped: 'Natural' },
-  atahualpa: { nombre: 'Estadio Olímpico Atahualpa', ciudad: 'Quito', club: 'El Nacional / Varios', capacidad: 35258, tipoCesped: 'Natural' },
-  'gonzalo-pozo': { nombre: 'Estadio Gonzalo Pozo Ripalda', ciudad: 'Quito', club: 'Aucas', capacidad: 19731, tipoCesped: 'Sintético' },
-  'christian-benitez': { nombre: 'Estadio Christian Benítez', ciudad: 'Guayaquil', club: 'Guayaquil City', capacidad: 14000, tipoCesped: 'Natural' },
-  'alejandro-serrano': { nombre: 'Estadio Alejandro Serrano Aguilar', ciudad: 'Cuenca', club: 'Deportivo Cuenca', capacidad: 23456, tipoCesped: 'Natural' },
-  jocay: { nombre: 'Estadio Jocay', ciudad: 'Manta', club: 'Delfín SC', capacidad: 18000, tipoCesped: 'Sintético' },
-  bellavista: { nombre: 'Estadio de Liga Bellavista', ciudad: 'Ambato', club: 'Mushuc Runa', capacidad: 12000, tipoCesped: 'Natural' },
-  'rumiñahui': { nombre: 'Estadio Rumiñahui', ciudad: 'Sangolquí', club: 'Independiente del Valle', capacidad: 12000, tipoCesped: 'Natural' },
-};
+  tipo_cesped: string;
+}
 
 interface Pasabolas {
+  id?: string;
   nombre: string;
   cedula: string;
   fechaNacimiento: string;
@@ -42,15 +30,14 @@ interface Pasabolas {
 export default function PaginaDetalleEstadio() {
   const params = useParams();
   const id = params.id as string;
-  const estadio = estadiosDetalle[id] || {
-    nombre: 'Estadio No Encontrado',
-    ciudad: 'N/A',
-    club: 'N/A',
-    capacidad: 0,
-    tipoCesped: 'N/A',
-  };
+  
+  const [estadio, setEstadio] = useState<Estadio | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
 
   // Estado del formulario checklist
+  const [checklistId, setChecklistId] = useState<string | null>(null);
   const [alturaCesped, setAlturaCesped] = useState(22);
   const [marcacionCancha, setMarcacionCancha] = useState(true);
   const [riegoFuncional, setRiegoFuncional] = useState(true);
@@ -59,16 +46,42 @@ export default function PaginaDetalleEstadio() {
   const [firmaComisario, setFirmaComisario] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
-  const [pasabolas, setPasabolas] = useState<Pasabolas[]>([
-    { nombre: 'Carlos Mendoza', cedula: '0923456789', fechaNacimiento: '2010-03-15', edad: 16 },
-    { nombre: 'Miguel Torres', cedula: '0912345678', fechaNacimiento: '2011-07-22', edad: 15 },
-    { nombre: 'Andrés Villacrés', cedula: '0934567890', fechaNacimiento: '2009-11-08', edad: 17 },
-    { nombre: 'José Ramírez', cedula: '0945678901', fechaNacimiento: '2010-05-30', edad: 16 },
-    { nombre: 'Luis Palacios', cedula: '0956789012', fechaNacimiento: '2012-01-12', edad: 14 },
-    { nombre: 'Diego Cedeño', cedula: '0967890123', fechaNacimiento: '2010-09-04', edad: 16 },
-    { nombre: 'Roberto Espinoza', cedula: '0978901234', fechaNacimiento: '2011-04-18', edad: 15 },
-    { nombre: 'Pedro Suárez', cedula: '0989012345', fechaNacimiento: '2010-12-25', edad: 16 },
-  ]);
+  const [pasabolas, setPasabolas] = useState<Pasabolas[]>([]);
+
+  useEffect(() => {
+    async function cargarDatos() {
+      if (!id) return;
+      const supabase = crearClienteNavegador();
+      
+      // Cargar estadio
+      const { data: estadioData } = await supabase.from('estadios').select('*').eq('id', id).single();
+      if (estadioData) {
+        setEstadio(estadioData as any);
+      }
+
+      // Cargar checklist si existe para este estadio (asumiendo checklist general del estadio, sin partido)
+      const { data: checklistData } = await supabase
+        .from('checklist_estadio')
+        .select('*')
+        .eq('estadio_id', id)
+        .is('partido_id', null)
+        .maybeSingle();
+
+      if (checklistData) {
+        setChecklistId(checklistData.id);
+        setAlturaCesped(checklistData.altura_cesped_mm || 22);
+        setMarcacionCancha(checklistData.estado_marcacion === 'OK');
+        setRiegoFuncional(checklistData.estado_riego === 'OK');
+        setDrenajeFuncional(checklistData.estado_drenaje === 'OK');
+        setFirmaComisario(checklistData.observaciones?.includes('Firma:') ? checklistData.observaciones.split('Firma:')[1].trim() : '');
+        setObservaciones(checklistData.observaciones?.split('Firma:')[0].trim() || '');
+        // alturaCamaras no está en la base de datos, lo dejamos igual
+      }
+
+      setCargando(false);
+    }
+    cargarDatos();
+  }, [id]);
 
   const cespedValido = alturaCesped >= 20 && alturaCesped <= 25;
   const pasabolasValidos = pasabolas.length >= 8 && pasabolas.length <= 12;
@@ -104,8 +117,55 @@ export default function PaginaDetalleEstadio() {
 
   const esEdadValida = (edad: number | null) => edad !== null && edad >= 14 && edad <= 17;
 
+  const handleGuardar = async () => {
+    setGuardando(true);
+    setMensaje({ tipo: '', texto: '' });
+    const supabase = crearClienteNavegador();
+
+    const checklistData = {
+      estadio_id: id,
+      altura_cesped_mm: alturaCesped,
+      estado_marcacion: marcacionCancha ? 'OK' : 'Malo',
+      estado_riego: riegoFuncional ? 'OK' : 'Malo',
+      estado_drenaje: drenajeFuncional ? 'OK' : 'Malo',
+      observaciones: observaciones + (firmaComisario ? `\nFirma: ${firmaComisario}` : ''),
+      pasabolas_registrados: pasabolas.length,
+      // partido_id: null (asumimos que es para el estadio en general)
+    };
+
+    let errorChecklist;
+    if (checklistId) {
+      const { error } = await supabase.from('checklist_estadio').update(checklistData).eq('id', checklistId);
+      errorChecklist = error;
+    } else {
+      const { data, error } = await supabase.from('checklist_estadio').insert([checklistData]).select().single();
+      if (data) setChecklistId(data.id);
+      errorChecklist = error;
+    }
+
+    if (errorChecklist) {
+      setMensaje({ tipo: 'error', texto: 'Error al guardar el checklist' });
+      setGuardando(false);
+      return;
+    }
+
+    setMensaje({ tipo: 'exito', texto: 'Checklist guardado correctamente' });
+    setGuardando(false);
+    setTimeout(() => setMensaje({ tipo: '', texto: '' }), 3000);
+  };
+
+  if (cargando) return <div className="p-8 text-center text-white">Cargando detalles del estadio...</div>;
+  if (!estadio) return <div className="p-8 text-center text-white">Estadio no encontrado.</div>;
+
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto">
+      {/* Mensaje de alerta */}
+      {mensaje.texto && (
+        <div className={`p-4 rounded-lg text-sm font-semibold text-white transition-all ${mensaje.tipo === 'exito' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {mensaje.texto}
+        </div>
+      )}
+
       {/* Botón Volver */}
       <Link
         href="/infraestructura"
@@ -135,10 +195,10 @@ export default function PaginaDetalleEstadio() {
                   <MapPin size={14} /> {estadio.ciudad}
                 </span>
                 <span className="flex items-center gap-1.5 text-white/70 text-sm">
-                  <Building2 size={14} /> {estadio.club}
+                  <Building2 size={14} /> {estadio.capacidad ? `Cap. ${estadio.capacidad.toLocaleString('es-EC')}` : 'Sin capacidad'}
                 </span>
                 <span className="flex items-center gap-1.5 text-white/70 text-sm">
-                  <User size={14} /> Cap. {estadio.capacidad.toLocaleString('es-EC')}
+                  <Sprout size={14} /> Césped {estadio.tipo_cesped || 'Natural'}
                 </span>
               </div>
             </div>
@@ -515,11 +575,13 @@ export default function PaginaDetalleEstadio() {
           Imprimir Checklist
         </button>
         <button
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold text-white transition-all"
+          onClick={handleGuardar}
+          disabled={guardando}
+          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-50"
           style={{ background: 'linear-gradient(135deg, #27AE60, #1E8449)' }}
         >
           <Save size={16} />
-          Guardar Checklist
+          {guardando ? 'Guardando...' : 'Guardar Checklist'}
         </button>
       </div>
     </div>
