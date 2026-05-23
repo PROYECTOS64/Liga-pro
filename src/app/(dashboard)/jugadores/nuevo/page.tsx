@@ -57,7 +57,6 @@ function Formulario() {
         club_id: formData.club_id || null,
         cedula: formData.cedula,
         fecha_nacimiento: formData.fechaNacimiento || null,
-        nacionalidad: formData.nacionalidad,
         posicion: formData.posicion.toUpperCase(),
         dorsal: formData.dorsal ? parseInt(formData.dorsal) : null,
       });
