@@ -47,6 +47,7 @@ export default function PaginaDetalleEstadio() {
   const [observaciones, setObservaciones] = useState('');
 
   const [pasabolas, setPasabolas] = useState<Pasabolas[]>([]);
+  const [clubIdAsociado, setClubIdAsociado] = useState<string | null>(null);
 
   useEffect(() => {
     async function cargarDatos() {
@@ -76,6 +77,22 @@ export default function PaginaDetalleEstadio() {
         setFirmaComisario(checklistData.observaciones?.includes('Firma:') ? checklistData.observaciones.split('Firma:')[1].trim() : '');
         setObservaciones(checklistData.observaciones?.split('Firma:')[0].trim() || '');
         // alturaCamaras no está en la base de datos, lo dejamos igual
+      }
+
+      // Cargar el club asociado y sus pasabolas (sin partido)
+      const { data: clubData } = await supabase.from('clubes').select('id').eq('estadio_id', id).limit(1).maybeSingle();
+      if (clubData) {
+        setClubIdAsociado(clubData.id);
+        const { data: pasabolasData } = await supabase.from('pasabolas').select('*').eq('club_id', clubData.id).is('partido_id', null);
+        if (pasabolasData && pasabolasData.length > 0) {
+          setPasabolas(pasabolasData.map(p => ({
+            id: p.id,
+            nombre: p.nombre_completo,
+            cedula: p.cedula,
+            fechaNacimiento: p.fecha_nacimiento,
+            edad: p.edad_calculada
+          })));
+        }
       }
 
       setCargando(false);
@@ -147,6 +164,21 @@ export default function PaginaDetalleEstadio() {
       setMensaje({ tipo: 'error', texto: 'Error al guardar el checklist' });
       setGuardando(false);
       return;
+    }
+
+    // Guardar pasabolas si hay un club asociado
+    if (clubIdAsociado) {
+      await supabase.from('pasabolas').delete().eq('club_id', clubIdAsociado).is('partido_id', null);
+      if (pasabolas.length > 0) {
+        const pasabolasInsert = pasabolas.map(p => ({
+          club_id: clubIdAsociado,
+          nombre_completo: p.nombre,
+          cedula: p.cedula,
+          fecha_nacimiento: p.fechaNacimiento || '2000-01-01', // Fallback
+          edad_calculada: p.edad
+        }));
+        await supabase.from('pasabolas').insert(pasabolasInsert);
+      }
     }
 
     setMensaje({ tipo: 'exito', texto: 'Checklist guardado correctamente' });
