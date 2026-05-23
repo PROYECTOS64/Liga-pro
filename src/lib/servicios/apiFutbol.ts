@@ -58,16 +58,30 @@ export const sincronizarPartidos = async () => {
   };
 
   try {
-    if (!process.env.NEXT_PUBLIC_RAPIDAPI_KEY) {
-      throw new Error("Falta la API Key de RapidAPI (NEXT_PUBLIC_RAPIDAPI_KEY)");
-    }
-
-    const respuesta = await fetch(url, opciones);
-    const datos = await respuesta.json();
-
-    if (!datos.response || datos.response.length === 0) {
-      throw new Error("No hay datos de la API o la respuesta está vacía");
-    }
+    // === MOCK MODE: Simulación de API-Football ===
+    // Ya que hubo problemas obteniendo la llave, inyectamos datos de prueba directamente
+    const datos = {
+      response: [
+        {
+          fixture: { id: 9001, date: new Date(Date.now() + 86400000).toISOString(), status: { long: 'Not Started' }, venue: { name: 'Estadio Rodrigo Paz Delgado' } },
+          teams: { home: { name: 'LDU Quito' }, away: { name: 'Barcelona SC' } },
+          goals: { home: 0, away: 0 },
+          league: { round: 'Regular Season - 16' }
+        },
+        {
+          fixture: { id: 9002, date: new Date(Date.now() + 172800000).toISOString(), status: { long: 'Not Started' }, venue: { name: 'Estadio George Capwell' } },
+          teams: { home: { name: 'Emelec' }, away: { name: 'Independiente del Valle' } },
+          goals: { home: 0, away: 0 },
+          league: { round: 'Regular Season - 16' }
+        },
+        {
+          fixture: { id: 9003, date: new Date(Date.now() + 259200000).toISOString(), status: { long: 'Not Started' }, venue: { name: 'Estadio Olímpico Atahualpa' } },
+          teams: { home: { name: 'El Nacional' }, away: { name: 'Aucas' } },
+          goals: { home: 0, away: 0 },
+          league: { round: 'Regular Season - 16' }
+        }
+      ]
+    };
 
     // 4. Formatear y preparar para inserción
     const partidosAInsertar: any[] = [];
@@ -119,7 +133,7 @@ export const sincronizarPartidos = async () => {
     }
 
     if (partidosAInsertar.length === 0) {
-      return { exito: false, error: 'Ningún partido pudo ser emparejado con los clubes de la BD' };
+      return { exito: false, error: 'Ningún partido de prueba pudo ser emparejado con los clubes de la BD' };
     }
 
     // 5. Inserción Masiva (Upsert)
@@ -132,12 +146,12 @@ export const sincronizarPartidos = async () => {
 
     return { 
       exito: true, 
-      mensaje: `Se sincronizaron correctamente ${partidosAInsertar.length} partidos.`,
+      mensaje: `¡MOCK EXITOSO! Se sincronizaron correctamente ${partidosAInsertar.length} partidos de prueba (LDU vs BSC, Emelec vs IDV, El Nacional vs Aucas).`,
       cantidad: partidosAInsertar.length
     };
 
   } catch (error: any) {
-    console.error("Error al consumir API-Football:", error);
+    console.error("Error al sincronizar partidos (Mock):", error);
     return { exito: false, error: error.message };
   }
 };
