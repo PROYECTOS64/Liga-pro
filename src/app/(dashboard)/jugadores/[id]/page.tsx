@@ -72,9 +72,27 @@ export default function PaginaDetalleJugador({ params }: { params: Promise<{ id:
   const [pestanaActiva, setPestanaActiva] = useState('informacion');
   const [jugadorDB, setJugadorDB] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const supabase = crearClienteNavegador();
 
   useEffect(() => {
+    async function fetchUserRole() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        if (user.email === 'admin@ligapro.ec') {
+          setUserRole('admin');
+        } else {
+          const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
+          let rolReal = 'usuario';
+          if (perfil?.rol === 'ADMIN') rolReal = 'admin';
+          else if (perfil?.rol === 'DELEGADO_CLUB') rolReal = 'club';
+          else if (perfil?.rol === 'ARBITRO') rolReal = 'arbitro';
+          setUserRole(rolReal);
+        }
+      }
+    }
+    fetchUserRole();
+
     async function fetchJugador() {
       const { data } = await supabase.from('jugadores').select('*, clubes(nombre)').eq('id', id).single();
       if (data) {
@@ -196,18 +214,20 @@ export default function PaginaDetalleJugador({ params }: { params: Promise<{ id:
               </div>
             </div>
             {/* Botón editar */}
-            <Link
-              href={`/jugadores/${id}/editar`}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-white/20"
-              style={{
-                background: 'rgba(255,255,255,0.15)',
-                color: 'white',
-                border: '1px solid rgba(255,255,255,0.25)',
-              }}
-            >
-              <Edit size={14} />
-              Editar
-            </Link>
+            {userRole === 'admin' && (
+              <Link
+                href={`/jugadores/${id}/editar`}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-white/20"
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  color: 'white',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                }}
+              >
+                <Edit size={14} />
+                Editar
+              </Link>
+            )}
           </div>
         </div>
       </div>

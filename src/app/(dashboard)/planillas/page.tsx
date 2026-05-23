@@ -76,6 +76,7 @@ export default function PaginaPlanillas() {
   const [partidosPlanillas, setPartidosPlanillas] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [now, setNow] = useState(new Date());
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const elementosPorPagina = 6;
 
@@ -83,6 +84,26 @@ export default function PaginaPlanillas() {
     // Actualizar reloj cada minuto para el T-70
     const interval = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      const supabase = await import('@/lib/supabase/cliente').then(m => m.crearClienteNavegador());
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        if (user.email === 'admin@ligapro.ec') {
+           setUserRole('admin');
+        } else {
+           const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
+           let rolReal = 'usuario';
+           if (perfil?.rol === 'ADMIN') rolReal = 'admin';
+           else if (perfil?.rol === 'DELEGADO_CLUB') rolReal = 'club';
+           else if (perfil?.rol === 'ARBITRO') rolReal = 'arbitro';
+           setUserRole(rolReal);
+        }
+      }
+    };
+    fetchUserRole();
   }, []);
 
   useEffect(() => {
@@ -185,14 +206,16 @@ export default function PaginaPlanillas() {
             Gestión y control de planillas de partido
           </p>
         </div>
-        <Link
-          href="/planillas/nueva"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white no-underline transition-all"
-          style={{ background: 'linear-gradient(135deg, #C0392B, #96281B)' }}
-        >
-          <Plus size={16} />
-          Nueva Planilla
-        </Link>
+        {(userRole === 'admin' || userRole === 'club') && (
+          <Link
+            href="/planillas/nueva"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white no-underline transition-all"
+            style={{ background: 'linear-gradient(135deg, #C0392B, #96281B)' }}
+          >
+            <Plus size={16} />
+            Nueva Planilla
+          </Link>
+        )}
       </div>
 
       {/* KPI resumen rápido */}
@@ -380,25 +403,42 @@ export default function PaginaPlanillas() {
                   </td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <Link
-                        href={p.planillaId ? `/planillas/${p.planillaId}` : `/planillas/nueva?partidoId=${p.id}`}
-                        className="p-2 rounded-lg transition-colors inline-flex"
-                        style={{ color: 'var(--ligapro-blue)' }}
-                        title={p.planillaId ? "Ver planilla" : "Crear planilla"}
-                      >
-                        {p.planillaId ? <Eye size={16} /> : <Plus size={16} />}
-                      </Link>
-                      {p.estado === 'BORRADOR' && (
-                        <Link
-                          href={p.planillaId ? `/planillas/${p.planillaId}` : `/planillas/nueva?partidoId=${p.id}`}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold no-underline transition-all text-white"
-                          style={{ background: 'linear-gradient(135deg, #C0392B, #96281B)' }}
-                        >
-                          {p.planillaId ? 'Editar' : 'Completar'}
-                        </Link>
-                      )}
-                      {p.estado === 'BLOQUEADA' && (
-                        <Lock size={14} style={{ color: 'var(--texto-terciario)' }} />
+                      {(userRole === 'admin' || userRole === 'club') ? (
+                        <>
+                          <Link
+                            href={p.planillaId ? `/planillas/${p.planillaId}` : `/planillas/nueva?partidoId=${p.id}`}
+                            className="p-2 rounded-lg transition-colors inline-flex"
+                            style={{ color: 'var(--ligapro-blue)' }}
+                            title={p.planillaId ? "Ver planilla" : "Crear planilla"}
+                          >
+                            {p.planillaId ? <Eye size={16} /> : <Plus size={16} />}
+                          </Link>
+                          {p.estado === 'BORRADOR' && (
+                            <Link
+                              href={p.planillaId ? `/planillas/${p.planillaId}` : `/planillas/nueva?partidoId=${p.id}`}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold no-underline transition-all text-white"
+                              style={{ background: 'linear-gradient(135deg, #C0392B, #96281B)' }}
+                            >
+                              {p.planillaId ? 'Editar' : 'Completar'}
+                            </Link>
+                          )}
+                          {p.estado === 'BLOQUEADA' && (
+                            <Lock size={14} style={{ color: 'var(--texto-terciario)' }} />
+                          )}
+                        </>
+                      ) : (
+                        p.planillaId ? (
+                          <Link
+                            href={`/planillas/${p.planillaId}`}
+                            className="p-2 rounded-lg transition-colors inline-flex"
+                            style={{ color: 'var(--ligapro-blue)' }}
+                            title="Ver planilla"
+                          >
+                            <Eye size={16} />
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-[var(--texto-terciario)]">—</span>
+                        )
                       )}
                     </div>
                   </td>

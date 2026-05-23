@@ -12,6 +12,7 @@ function FormularioEditarClub({ id }: { id: string }) {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [exito, setExito] = useState(false);
+  const [autorizado, setAutorizado] = useState(false);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -26,6 +27,30 @@ function FormularioEditarClub({ id }: { id: string }) {
   });
 
   useEffect(() => {
+    async function checkRole() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
+      let rolReal = 'usuario';
+      if (user.email === 'admin@ligapro.ec') {
+        rolReal = 'admin';
+      } else {
+        const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
+        if (perfil?.rol === 'ADMIN') rolReal = 'admin';
+        else if (perfil?.rol === 'DELEGADO_CLUB') rolReal = 'club';
+        else if (perfil?.rol === 'ARBITRO') rolReal = 'arbitro';
+      }
+      
+      if (rolReal !== 'admin') {
+        router.replace('/clubes');
+      } else {
+        setAutorizado(true);
+      }
+    }
+    checkRole();
+
     async function fetchClub() {
       const { data } = await supabase.from('clubes').select('*').eq('id', id).single();
       if (data) {
@@ -44,7 +69,7 @@ function FormularioEditarClub({ id }: { id: string }) {
       setCargando(false);
     }
     fetchClub();
-  }, [id, supabase]);
+  }, [id, supabase, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -80,7 +105,7 @@ function FormularioEditarClub({ id }: { id: string }) {
     }, 1500);
   };
 
-  if (cargando) return <div className="p-10 text-center">Cargando formulario...</div>;
+  if (cargando || !autorizado) return <div className="p-12 text-center text-[var(--texto-secundario)] bg-[var(--fondo-tarjeta)] rounded-xl border border-[var(--borde-suave)] shadow-sm">Verificando permisos de acceso...</div>;
 
   return (
     <div className="space-y-6 max-w-[800px] mx-auto">

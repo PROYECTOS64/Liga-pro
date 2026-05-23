@@ -37,11 +37,39 @@ export default function PaginaNuevaPlanilla() {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [pasoActual, setPasoActual] = useState(1);
+  const [autorizado, setAutorizado] = useState(false);
   
   // Data de BD
   const [partidosDisponibles, setPartidosDisponibles] = useState<any[]>([]);
   const [jugadoresDisponibles, setJugadoresDisponibles] = useState<any[]>([]);
   const [staffDisponible, setStaffDisponible] = useState<any[]>([]);
+
+  useEffect(() => {
+    const checkRole = async () => {
+      const supabase = crearClienteNavegador();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
+      let rolReal = 'usuario';
+      if (user.email === 'admin@ligapro.ec') {
+        rolReal = 'admin';
+      } else {
+        const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
+        if (perfil?.rol === 'ADMIN') rolReal = 'admin';
+        else if (perfil?.rol === 'DELEGADO_CLUB') rolReal = 'club';
+        else if (perfil?.rol === 'ARBITRO') rolReal = 'arbitro';
+      }
+      
+      if (rolReal !== 'admin' && rolReal !== 'club') {
+        router.replace('/planillas');
+      } else {
+        setAutorizado(true);
+      }
+    };
+    checkRole();
+  }, [router]);
 
   // Estado del formulario
   const [partidoSeleccionado, setPartidoSeleccionado] = useState<string | null>(null);
@@ -245,8 +273,8 @@ export default function PaginaNuevaPlanilla() {
     }
   };
 
-  if (cargando) {
-    return <div className="p-10 text-center">Cargando datos...</div>;
+  if (cargando || !autorizado) {
+    return <div className="p-12 text-center text-[var(--texto-secundario)] bg-[var(--fondo-tarjeta)] rounded-xl border border-[var(--borde-suave)] shadow-sm">Verificando permisos de acceso...</div>;
   }
 
   return (

@@ -265,7 +265,7 @@ export default function PaginaJugadores() {
             <Download size={16} />
             Exportar PDF
           </button>
-          {(userRole === 'admin' || userRole === 'club') && (
+          {userRole === 'admin' && (
             <button
               onClick={() => router.push('/jugadores/nuevo')}
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white no-underline transition-all"
@@ -498,7 +498,7 @@ export default function PaginaJugadores() {
                         >
                           <MoreHorizontal size={18} />
                         </Link>
-                        {(userRole === 'admin' || userRole === 'club') && (
+                        {userRole === 'admin' && (
                           <button
                             onClick={() => eliminarJugador(j.id)}
                             className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -527,7 +527,7 @@ export default function PaginaJugadores() {
           <div className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold" style={{ color: 'var(--texto-primario)' }}>Cuerpo Técnico</h3>
-              {(userRole === 'admin' || userRole === 'club') && (
+              {userRole === 'admin' && (
                 <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity" style={{ background: '#2980B9' }} onClick={agregarTecnico}>
                   <Plus size={16} /> Agregar Miembro
                 </button>
@@ -548,7 +548,9 @@ export default function PaginaJugadores() {
                       <td className="px-6 py-3 text-sm font-semibold" style={{ color: 'var(--texto-primario)' }}>{t.nombre}</td>
                       <td className="px-6 py-3 text-sm" style={{ color: 'var(--texto-secundario)' }}>{t.cargo}</td>
                       <td className="px-6 py-3 text-center">
-                        <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => eliminarTecnico(t.id)}><X size={16} /></button>
+                        {userRole === 'admin' && (
+                          <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => eliminarTecnico(t.id)}><X size={16} /></button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -568,7 +570,7 @@ export default function PaginaJugadores() {
           <div className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold" style={{ color: 'var(--texto-primario)' }}>Staff Médico</h3>
-              {(userRole === 'admin' || userRole === 'club') && (
+              {userRole === 'admin' && (
                 <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity" style={{ background: '#27AE60' }} onClick={agregarMedico}>
                   <Plus size={16} /> Agregar Miembro
                 </button>
@@ -589,7 +591,9 @@ export default function PaginaJugadores() {
                       <td className="px-6 py-3 text-sm font-semibold" style={{ color: 'var(--texto-primario)' }}>{m.nombre}</td>
                       <td className="px-6 py-3 text-sm" style={{ color: 'var(--texto-secundario)' }}>{m.cargo}</td>
                       <td className="px-6 py-3 text-center">
-                        <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => eliminarMedico(m.id)}><X size={16} /></button>
+                        {userRole === 'admin' && (
+                          <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => eliminarMedico(m.id)}><X size={16} /></button>
+                        )}
                       </td>
                     </tr>
                   ))}

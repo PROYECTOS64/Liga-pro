@@ -11,8 +11,26 @@ function KardexClub({ id }: { id: string }) {
   const supabase = crearClienteNavegador();
   const [club, setClub] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
+    async function fetchUserRole() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        if (user.email === 'admin@ligapro.ec') {
+           setUserRole('admin');
+        } else {
+           const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
+           let rolReal = 'usuario';
+           if (perfil?.rol === 'ADMIN') rolReal = 'admin';
+           else if (perfil?.rol === 'DELEGADO_CLUB') rolReal = 'club';
+           else if (perfil?.rol === 'ARBITRO') rolReal = 'arbitro';
+           setUserRole(rolReal);
+        }
+      }
+    }
+    fetchUserRole();
+
     async function fetchClub() {
       const { data, error } = await supabase
         .from('clubes')
@@ -89,18 +107,20 @@ function KardexClub({ id }: { id: string }) {
             </div>
 
             {/* Botón editar */}
-            <Link
-              href={`/clubes/${id}/editar`}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:bg-white/20 shadow-md"
-              style={{
-                background: 'rgba(255,255,255,0.15)',
-                color: 'white',
-                border: '1px solid rgba(255,255,255,0.25)',
-              }}
-            >
-              <Edit size={16} />
-              Editar Club
-            </Link>
+            {userRole === 'admin' && (
+              <Link
+                href={`/clubes/${id}/editar`}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:bg-white/20 shadow-md"
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  color: 'white',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                }}
+              >
+                <Edit size={16} />
+                Editar Club
+              </Link>
+            )}
           </div>
         </div>
         

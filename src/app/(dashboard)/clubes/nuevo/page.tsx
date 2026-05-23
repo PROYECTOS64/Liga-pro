@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Plus, Shield, MapPin, Building, CheckCircle2 } from 'lucide-react';
@@ -10,6 +10,7 @@ export default function PaginaNuevoClub() {
   const router = useRouter();
   const [cargando, setCargando] = useState(false);
   const [exito, setExito] = useState(false);
+  const [autorizado, setAutorizado] = useState(false);
   const supabase = crearClienteNavegador();
 
   const [formData, setFormData] = useState({
@@ -21,6 +22,36 @@ export default function PaginaNuevoClub() {
     presidente: '',
     estadio: '',
   });
+
+  useEffect(() => {
+    async function checkRole() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
+      let rolReal = 'usuario';
+      if (user.email === 'admin@ligapro.ec') {
+        rolReal = 'admin';
+      } else {
+        const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
+        if (perfil?.rol === 'ADMIN') rolReal = 'admin';
+        else if (perfil?.rol === 'DELEGADO_CLUB') rolReal = 'club';
+        else if (perfil?.rol === 'ARBITRO') rolReal = 'arbitro';
+      }
+      
+      if (rolReal !== 'admin') {
+        router.replace('/clubes');
+      } else {
+        setAutorizado(true);
+      }
+    }
+    checkRole();
+  }, [supabase, router]);
+
+  if (!autorizado) {
+    return <div className="p-12 text-center text-[var(--texto-secundario)] bg-[var(--fondo-tarjeta)] rounded-xl border border-[var(--borde-suave)] shadow-sm">Verificando permisos de acceso...</div>;
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
