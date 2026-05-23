@@ -1,18 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Search, Filter, Calendar, Users, FileText, Ban, DollarSign, Activity } from 'lucide-react';
+import { AlertTriangle, Search, Filter, Calendar, Users, FileText, Ban, DollarSign, Activity, Plus } from 'lucide-react';
 import { crearClienteNavegador } from '@/lib/supabase/cliente';
+import ModalSancionManual from '@/components/ModalSancionManual';
 
 export default function PaginaDisciplinario() {
   const [suspensiones, setSuspensiones] = useState<any[]>([]);
   const [multas, setMultas] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [tabActiva, setTabActiva] = useState<'SUSPENSIONES' | 'MULTAS'>('SUSPENSIONES');
+  const [modalAbierto, setModalAbierto] = useState(false);
 
-  useEffect(() => {
-    async function fetchData() {
-      const supabase = crearClienteNavegador();
+  const fetchData = async () => {
+    setCargando(true);
+    const supabase = crearClienteNavegador();
       
       // Fetch suspensiones
       const { data: dataSuspensiones } = await supabase
@@ -40,8 +42,10 @@ export default function PaginaDisciplinario() {
 
       if (dataMultas) setMultas(dataMultas);
 
-      setCargando(false);
-    }
+    setCargando(false);
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -59,6 +63,16 @@ export default function PaginaDisciplinario() {
           <p className="text-sm mt-1 text-white/60 ml-[52px]">
             Tribunal de Sanciones, multas y jugadores inhabilitados
           </p>
+        </div>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setModalAbierto(true)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold text-white transition-all shadow-md hover:-translate-y-0.5"
+            style={{ background: 'linear-gradient(135deg, #E74C3C, #C0392B)' }}
+          >
+            <Plus size={18} />
+            Ingresar Sanción
+          </button>
         </div>
       </div>
 
@@ -202,6 +216,15 @@ export default function PaginaDisciplinario() {
           </div>
         )}
       </div>
+
+      <ModalSancionManual 
+        isOpen={modalAbierto} 
+        onClose={() => setModalAbierto(false)} 
+        onGuardado={() => {
+          setModalAbierto(false);
+          fetchData();
+        }} 
+      />
     </div>
   );
 }
