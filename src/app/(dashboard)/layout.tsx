@@ -58,6 +58,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
+  const [menuNotificacionesAbierto, setMenuNotificacionesAbierto] = useState(false);
   const [sidebarAbierta, setSidebarAbierta] = useState(true);
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [usuario, setUsuario] = useState<{ email?: string; nombre?: string; role?: string } | null>(null);
@@ -228,26 +229,59 @@ export default function DashboardLayout({
         {/* Acciones de usuario */}
         <div className="flex items-center gap-3">
           {/* Notificaciones */}
-          <button
-            className="relative p-2 rounded-lg text-white/75 hover:text-white hover:bg-white/10 transition-colors"
-            aria-label="Notificaciones"
-          >
-            <Bell size={20} />
-            <span
-              className="absolute top-1 right-1 rounded-full"
-              style={{
-                width: '8px',
-                height: '8px',
-                background: '#E74C3C',
-                border: '2px solid #1B2A4A',
+          <div className="relative">
+            <button
+              onClick={() => {
+                setMenuNotificacionesAbierto(!menuNotificacionesAbierto);
+                if (menuUsuarioAbierto) setMenuUsuarioAbierto(false);
               }}
-            />
-          </button>
+              className="relative p-2 rounded-lg text-white/75 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="Notificaciones"
+            >
+              <Bell size={20} />
+              {/* Indicador simulado */}
+            </button>
+
+            {menuNotificacionesAbierto && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setMenuNotificacionesAbierto(false)}
+                />
+                <div
+                  className="absolute right-0 top-full mt-2 w-72 rounded-xl overflow-hidden z-50 animate-scale-in"
+                  style={{
+                    background: 'var(--fondo-tarjeta)',
+                    boxShadow: 'var(--sombra-elevada)',
+                    border: '1px solid var(--borde-suave)',
+                  }}
+                >
+                  <div className="px-4 py-3 flex justify-between items-center border-b" style={{ borderColor: 'var(--borde-suave)' }}>
+                    <p className="text-sm font-bold" style={{ color: 'var(--texto-primario)' }}>
+                      Notificaciones
+                    </p>
+                  </div>
+                  <div className="p-6 text-center">
+                    <Bell size={32} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--texto-terciario)' }} />
+                    <p className="text-sm font-medium" style={{ color: 'var(--texto-secundario)' }}>No tienes notificaciones nuevas por el momento.</p>
+                  </div>
+                  <div className="border-t py-2 px-4 text-center" style={{ borderColor: 'var(--borde-suave)' }}>
+                    <button className="text-xs font-semibold" style={{ color: 'var(--ligapro-blue)' }}>
+                      Marcar todas como leídas
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Menú de usuario */}
           <div className="relative">
             <button
-              onClick={() => setMenuUsuarioAbierto(!menuUsuarioAbierto)}
+              onClick={() => {
+                setMenuUsuarioAbierto(!menuUsuarioAbierto);
+                if (menuNotificacionesAbierto) setMenuNotificacionesAbierto(false);
+              }}
               className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
             >
               <div

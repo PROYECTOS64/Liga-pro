@@ -1,62 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, ArrowRight, Check, Users, Shield, FileText,
   UserPlus, X, AlertTriangle, CheckCircle2, Stethoscope, ClipboardList
 } from 'lucide-react';
-
-// ============================================
-// DATOS DE EJEMPLO
-// ============================================
-const partidosDisponibles = [
-  { id: '1', local: 'Barcelona SC', visitante: 'Emelec', fecha: '25/05/2026', hora: '15:30', estadio: 'Monumental', jornada: 16 },
-  { id: '2', local: 'LDU Quito', visitante: 'El Nacional', fecha: '25/05/2026', hora: '18:00', estadio: 'Casa Blanca', jornada: 16 },
-  { id: '3', local: 'Independiente del Valle', visitante: 'Aucas', fecha: '26/05/2026', hora: '12:00', estadio: 'Rumiñahui', jornada: 16 },
-  { id: '4', local: 'Deportivo Cuenca', visitante: 'Mushuc Runa', fecha: '26/05/2026', hora: '15:30', estadio: 'A. Serrano Aguilar', jornada: 16 },
-];
-
-const jugadoresDisponibles = [
-  { id: '1', nombre: 'Alexander Domínguez', posicion: 'POR', dorsal: 1 },
-  { id: '2', nombre: 'Félix Torres', posicion: 'DEF', dorsal: 2 },
-  { id: '3', nombre: 'Pervis Estupiñán', posicion: 'DEF', dorsal: 3 },
-  { id: '4', nombre: 'Piero Hincapié', posicion: 'DEF', dorsal: 4 },
-  { id: '5', nombre: 'Carlos Gruezo', posicion: 'MED', dorsal: 5 },
-  { id: '6', nombre: 'Robert Arboleda', posicion: 'DEF', dorsal: 6 },
-  { id: '7', nombre: 'Gonzalo Plata', posicion: 'EXT', dorsal: 7 },
-  { id: '8', nombre: 'Moisés Caicedo', posicion: 'MED', dorsal: 8 },
-  { id: '9', nombre: 'Michael Estrada', posicion: 'DEL', dorsal: 9 },
-  { id: '10', nombre: 'Ángel Mena', posicion: 'MED', dorsal: 10 },
-  { id: '11', nombre: 'Jeremy Sarmiento', posicion: 'EXT', dorsal: 11 },
-  { id: '12', nombre: 'Alan Franco', posicion: 'DEF', dorsal: 15 },
-  { id: '13', nombre: 'Enner Valencia', posicion: 'DEL', dorsal: 13 },
-  { id: '14', nombre: 'Jhegson Méndez', posicion: 'MED', dorsal: 14 },
-  { id: '15', nombre: 'Hernán Galíndez', posicion: 'POR', dorsal: 22 },
-  { id: '16', nombre: 'Byron Castillo', posicion: 'DEF', dorsal: 16 },
-  { id: '17', nombre: 'Jackson Porozo', posicion: 'DEF', dorsal: 17 },
-  { id: '18', nombre: 'Joao Rojas', posicion: 'EXT', dorsal: 18 },
-  { id: '19', nombre: 'Renato Ibarra', posicion: 'MED', dorsal: 19 },
-  { id: '20', nombre: 'Djorkaeff Reasco', posicion: 'DEL', dorsal: 20 },
-  { id: '21', nombre: 'Kévin Rodríguez', posicion: 'DEL', dorsal: 21 },
-  { id: '22', nombre: 'Xavier Arreaga', posicion: 'DEF', dorsal: 23 },
-  { id: '23', nombre: 'Ayrton Preciado', posicion: 'EXT', dorsal: 24 },
-  { id: '24', nombre: 'Gabriel Cortez', posicion: 'MED', dorsal: 25 },
-  { id: '25', nombre: 'Óscar Zambrano', posicion: 'DEF', dorsal: 26 },
-];
-
-const staffDisponible = [
-  { id: 's1', nombre: 'Sebastián Beccacece', rol: 'Director Técnico', obligatorio: true },
-  { id: 's2', nombre: 'Pablo Sánchez', rol: 'Asistente Técnico', obligatorio: false },
-  { id: 's3', nombre: 'Dr. Carlos Medina', rol: 'Médico', obligatorio: true },
-  { id: 's4', nombre: 'Ricardo Vásquez', rol: 'Preparador Físico', obligatorio: false },
-  { id: 's5', nombre: 'Miguel Ángel López', rol: 'Entrenador de Porteros', obligatorio: false },
-  { id: 's6', nombre: 'Lic. María Fernanda Torres', rol: 'Fisioterapeuta', obligatorio: false },
-  { id: 's7', nombre: 'Juan Carlos Ruiz', rol: 'Analista de Video', obligatorio: false },
-  { id: 's8', nombre: 'Dr. Laura Espinoza', rol: 'Nutricionista', obligatorio: false },
-  { id: 's9', nombre: 'Andrés Cevallos', rol: 'Asistente Técnico 2', obligatorio: false },
-  { id: 's10', nombre: 'Pedro Quiñónez', rol: 'Utilero', obligatorio: false },
-];
+import { crearClienteNavegador } from '@/lib/supabase/cliente';
 
 const pasos = [
   { id: 1, titulo: 'Seleccionar Partido', icono: Shield },
@@ -67,29 +18,115 @@ const pasos = [
 
 function InsigniaPosicion({ posicion }: { posicion: string }) {
   const colores: Record<string, { bg: string; text: string }> = {
-    POR: { bg: '#FEF3C7', text: '#92400E' },
-    DEF: { bg: '#DBEAFE', text: '#1E40AF' },
-    MED: { bg: '#DEF7EC', text: '#03543F' },
-    EXT: { bg: '#F3E8FF', text: '#6B21A8' },
-    DEL: { bg: '#FEE2E2', text: '#991B1B' },
+    PORTERO: { bg: '#FEF3C7', text: '#92400E' },
+    DEFENSA: { bg: '#DBEAFE', text: '#1E40AF' },
+    MEDIOCAMPISTA: { bg: '#DEF7EC', text: '#03543F' },
+    DELANTERO: { bg: '#FEE2E2', text: '#991B1B' },
   };
-  const c = colores[posicion] || colores.MED;
+  const c = colores[posicion] || colores.MEDIOCAMPISTA;
+  const pStr = posicion.substring(0, 3).toUpperCase();
   return (
     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold" style={{ background: c.bg, color: c.text }}>
-      {posicion}
+      {pStr}
     </span>
   );
 }
 
 export default function PaginaNuevaPlanilla() {
+  const router = useRouter();
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
   const [pasoActual, setPasoActual] = useState(1);
+  
+  // Data de BD
+  const [partidosDisponibles, setPartidosDisponibles] = useState<any[]>([]);
+  const [jugadoresDisponibles, setJugadoresDisponibles] = useState<any[]>([]);
+  const [staffDisponible, setStaffDisponible] = useState<any[]>([]);
+
+  // Estado del formulario
   const [partidoSeleccionado, setPartidoSeleccionado] = useState<string | null>(null);
+  const [clubSeleccionadoId, setClubSeleccionadoId] = useState<string | null>(null);
   const [titulares, setTitulares] = useState<string[]>([]);
   const [suplentes, setSuplentes] = useState<string[]>([]);
   const [staffSeleccionado, setStaffSeleccionado] = useState<string[]>([]);
 
   const partido = partidosDisponibles.find((p) => p.id === partidoSeleccionado);
   const totalJugadores = titulares.length + suplentes.length;
+
+  // Cargar Partidos inicial
+  useEffect(() => {
+    async function fetchPartidos() {
+      const supabase = crearClienteNavegador();
+      const { data } = await supabase
+        .from('partidos')
+        .select(`
+          id, jornada, fecha_hora, estadio:estadios(nombre),
+          local:clubes!partidos_club_local_id_fkey(id, nombre),
+          visitante:clubes!partidos_club_visitante_id_fkey(id, nombre)
+        `)
+        .eq('estado', 'BORRADOR')
+        .order('fecha_hora', { ascending: true });
+        
+      if (data) {
+        setPartidosDisponibles(data.map(p => ({
+          id: p.id,
+          jornada: p.jornada,
+          fecha: new Date(p.fecha_hora).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+          hora: new Date(p.fecha_hora).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' }),
+          estadio: ((p.estadio as any)?.nombre || (p.estadio as any)?.[0]?.nombre) || 'Sin estadio',
+          localId: (p.local as any)?.id || (p.local as any)?.[0]?.id,
+          local: (p.local as any)?.nombre || (p.local as any)?.[0]?.nombre,
+          visitanteId: (p.visitante as any)?.id || (p.visitante as any)?.[0]?.id,
+          visitante: (p.visitante as any)?.nombre || (p.visitante as any)?.[0]?.nombre
+        })));
+      }
+      setCargando(false);
+    }
+    fetchPartidos();
+  }, []);
+
+  // Cargar jugadores y staff cuando se elige el club
+  useEffect(() => {
+    async function loadClubData() {
+      if (!clubSeleccionadoId) {
+        setJugadoresDisponibles([]);
+        setStaffDisponible([]);
+        return;
+      }
+      const supabase = crearClienteNavegador();
+      
+      const { data: jugData } = await supabase
+        .from('jugadores')
+        .select('id, nombre_completo, posicion, dorsal')
+        .eq('club_id', clubSeleccionadoId)
+        .order('dorsal', { ascending: true });
+        
+      if (jugData) {
+        setJugadoresDisponibles(jugData.map(j => ({
+          id: j.id, nombre: j.nombre_completo, posicion: j.posicion, dorsal: j.dorsal || 0
+        })));
+      }
+
+      const { data: stData } = await supabase
+        .from('staff')
+        .select('id, nombre_completo, tipo_staff')
+        .eq('club_id', clubSeleccionadoId);
+        
+      if (stData) {
+        setStaffDisponible(stData.map(s => ({
+          id: s.id, nombre: s.nombre_completo, rol: s.tipo_staff,
+          obligatorio: ['DIRECTOR_TECNICO', 'MEDICO'].includes(s.tipo_staff)
+        })));
+      }
+      
+      // Reset selecciones previas al cambiar de club
+      setTitulares([]);
+      setSuplentes([]);
+      setStaffSeleccionado([]);
+    }
+    
+    loadClubData();
+  }, [clubSeleccionadoId]);
 
   // Validaciones
   const validacionesPaso2 = {
@@ -99,12 +136,12 @@ export default function PaginaNuevaPlanilla() {
 
   const tieneDT = staffSeleccionado.some((id) => {
     const s = staffDisponible.find((st) => st.id === id);
-    return s?.rol === 'Director Técnico';
+    return s?.rol === 'DIRECTOR_TECNICO';
   });
 
   const tieneMedico = staffSeleccionado.some((id) => {
     const s = staffDisponible.find((st) => st.id === id);
-    return s?.rol === 'Médico';
+    return s?.rol === 'MEDICO';
   });
 
   const validacionesPaso3 = {
@@ -115,7 +152,7 @@ export default function PaginaNuevaPlanilla() {
 
   const puedeAvanzar = () => {
     switch (pasoActual) {
-      case 1: return !!partidoSeleccionado;
+      case 1: return !!partidoSeleccionado && !!clubSeleccionadoId;
       case 2: return validacionesPaso2.titularesSuficientes && validacionesPaso2.maxJugadores;
       case 3: return validacionesPaso3.tieneDT && validacionesPaso3.tieneMedico && validacionesPaso3.maxStaff;
       default: return true;
@@ -151,6 +188,66 @@ export default function PaginaNuevaPlanilla() {
       setStaffSeleccionado([...staffSeleccionado, id]);
     }
   };
+
+  const handleEnviarPlanilla = async () => {
+    if (!partidoSeleccionado || !clubSeleccionadoId) return;
+    setGuardando(true);
+    
+    try {
+      const supabase = crearClienteNavegador();
+      
+      // 1. Crear planilla
+      const { data: planData, error: planError } = await supabase.from('planillas').insert({
+        partido_id: partidoSeleccionado,
+        club_id: clubSeleccionadoId,
+        estado: 'ENVIADA',
+        fecha_envio: new Date().toISOString()
+      }).select('id').single();
+      
+      if (planError) throw planError;
+      
+      const planillaId = planData.id;
+      
+      // 2. Insertar jugadores
+      const insertsJugadores = [
+        ...titulares.map(id => {
+          const j = jugadoresDisponibles.find(x => x.id === id);
+          return { planilla_id: planillaId, jugador_id: id, es_titular: true, dorsal_partido: j?.dorsal || 0 };
+        }),
+        ...suplentes.map(id => {
+          const j = jugadoresDisponibles.find(x => x.id === id);
+          return { planilla_id: planillaId, jugador_id: id, es_titular: false, dorsal_partido: j?.dorsal || 0 };
+        })
+      ];
+      
+      if (insertsJugadores.length > 0) {
+        const { error: errJug } = await supabase.from('planilla_jugadores').insert(insertsJugadores);
+        if (errJug) throw errJug;
+      }
+      
+      // 3. Insertar staff
+      if (staffSeleccionado.length > 0) {
+        const insertsStaff = staffSeleccionado.map(id => ({
+          planilla_id: planillaId,
+          staff_id: id
+        }));
+        const { error: errSt } = await supabase.from('planilla_staff').insert(insertsStaff);
+        if (errSt) throw errSt;
+      }
+      
+      router.push('/planillas');
+      router.refresh();
+      
+    } catch (error) {
+      console.error('Error al enviar planilla:', error);
+      alert('Hubo un error al enviar la planilla. Verifica la consola.');
+      setGuardando(false);
+    }
+  };
+
+  if (cargando) {
+    return <div className="p-10 text-center">Cargando datos...</div>;
+  }
 
   return (
     <div className="space-y-6 max-w-[1100px] mx-auto">
@@ -217,11 +314,11 @@ export default function PaginaNuevaPlanilla() {
             <p className="text-sm mb-6" style={{ color: 'var(--texto-secundario)' }}>
               Elija el partido para el cual desea crear la planilla
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               {partidosDisponibles.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => setPartidoSeleccionado(p.id)}
+                  onClick={() => { setPartidoSeleccionado(p.id); setClubSeleccionadoId(null); }}
                   className="text-left p-5 rounded-xl transition-all"
                   style={{
                     background: partidoSeleccionado === p.id ? '#EBF5FF' : 'var(--fondo-principal)',
@@ -236,15 +333,42 @@ export default function PaginaNuevaPlanilla() {
                   <p className="text-xs" style={{ color: 'var(--texto-secundario)' }}>
                     Jornada {p.jornada} · {p.fecha} · {p.hora} · {p.estadio}
                   </p>
-                  {partidoSeleccionado === p.id && (
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <CheckCircle2 size={14} style={{ color: '#2980B9' }} />
-                      <span className="text-xs font-semibold" style={{ color: '#2980B9' }}>Seleccionado</span>
-                    </div>
-                  )}
                 </button>
               ))}
+              {partidosDisponibles.length === 0 && (
+                <div className="col-span-2 p-6 text-center text-sm" style={{ color: 'var(--texto-secundario)' }}>No hay partidos pendientes.</div>
+              )}
             </div>
+
+            {partidoSeleccionado && partido && (
+               <div className="animate-slide-up bg-gray-50/50 rounded-xl p-5" style={{ border: '1px solid var(--borde-suave)' }}>
+                  <h3 className="text-sm font-bold mb-3" style={{ color: 'var(--texto-primario)' }}>¿Para qué equipo registrará la planilla?</h3>
+                  <div className="flex gap-4">
+                     <button
+                        onClick={() => setClubSeleccionadoId(partido.localId)}
+                        className="flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all border"
+                        style={{
+                           borderColor: clubSeleccionadoId === partido.localId ? '#2980B9' : 'var(--borde-suave)',
+                           backgroundColor: clubSeleccionadoId === partido.localId ? '#2980B9' : 'white',
+                           color: clubSeleccionadoId === partido.localId ? 'white' : 'var(--texto-primario)'
+                        }}
+                     >
+                        {partido.local} (Local)
+                     </button>
+                     <button
+                        onClick={() => setClubSeleccionadoId(partido.visitanteId)}
+                        className="flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all border"
+                        style={{
+                           borderColor: clubSeleccionadoId === partido.visitanteId ? '#2980B9' : 'var(--borde-suave)',
+                           backgroundColor: clubSeleccionadoId === partido.visitanteId ? '#2980B9' : 'white',
+                           color: clubSeleccionadoId === partido.visitanteId ? 'white' : 'var(--texto-primario)'
+                        }}
+                     >
+                        {partido.visitante} (Visitante)
+                     </button>
+                  </div>
+               </div>
+            )}
           </div>
         )}
 
@@ -334,6 +458,9 @@ export default function PaginaNuevaPlanilla() {
                   </div>
                 );
               })}
+              {jugadoresDisponibles.length === 0 && (
+                <div className="text-center p-6 text-sm" style={{ color: 'var(--texto-secundario)' }}>No hay jugadores registrados en este club.</div>
+              )}
             </div>
           </div>
         )}
@@ -383,7 +510,7 @@ export default function PaginaNuevaPlanilla() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
               {staffDisponible.map((s) => {
                 const seleccionado = staffSeleccionado.includes(s.id);
                 return (
@@ -398,18 +525,18 @@ export default function PaginaNuevaPlanilla() {
                   >
                     <div className="flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0"
                       style={{
-                        background: s.rol === 'Director Técnico' ? '#FEF3C7' : s.rol === 'Médico' ? '#FEE2E2' : 'var(--fondo-tarjeta)',
+                        background: s.rol === 'DIRECTOR_TECNICO' ? '#FEF3C7' : s.rol === 'MEDICO' ? '#FEE2E2' : 'var(--fondo-tarjeta)',
                         border: '1px solid var(--borde-suave)',
                       }}
                     >
-                      {s.rol === 'Director Técnico' ? <ClipboardList size={18} style={{ color: '#D4A843' }} /> :
-                       s.rol === 'Médico' ? <Stethoscope size={18} style={{ color: '#C0392B' }} /> :
+                      {s.rol === 'DIRECTOR_TECNICO' ? <ClipboardList size={18} style={{ color: '#D4A843' }} /> :
+                       s.rol === 'MEDICO' ? <Stethoscope size={18} style={{ color: '#C0392B' }} /> :
                        <Users size={18} style={{ color: 'var(--texto-terciario)' }} />}
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-semibold" style={{ color: 'var(--texto-primario)' }}>{s.nombre}</p>
                       <p className="text-xs" style={{ color: 'var(--texto-secundario)' }}>
-                        {s.rol}
+                        {s.rol.replace('_', ' ')}
                         {s.obligatorio && <span className="ml-1 text-red-500 font-bold">*</span>}
                       </p>
                     </div>
@@ -417,6 +544,9 @@ export default function PaginaNuevaPlanilla() {
                   </button>
                 );
               })}
+              {staffDisponible.length === 0 && (
+                <div className="text-center p-6 text-sm" style={{ color: 'var(--texto-secundario)' }}>No hay cuerpo técnico registrado en este club.</div>
+              )}
             </div>
           </div>
         )}
@@ -500,7 +630,7 @@ export default function PaginaNuevaPlanilla() {
                     <div key={id} className="flex items-center gap-2 text-sm">
                       <CheckCircle2 size={14} style={{ color: '#27AE60' }} />
                       <span className="font-medium" style={{ color: 'var(--texto-primario)' }}>{s.nombre}</span>
-                      <span className="text-xs" style={{ color: 'var(--texto-terciario)' }}>({s.rol})</span>
+                      <span className="text-xs" style={{ color: 'var(--texto-terciario)' }}>({s.rol.replace('_', ' ')})</span>
                     </div>
                   ) : null;
                 })}
@@ -516,7 +646,7 @@ export default function PaginaNuevaPlanilla() {
         >
           <button
             onClick={() => setPasoActual(Math.max(1, pasoActual - 1))}
-            disabled={pasoActual === 1}
+            disabled={pasoActual === 1 || guardando}
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-40"
             style={{ background: 'var(--fondo-principal)', border: '1px solid var(--borde-suave)', color: 'var(--texto-secundario)' }}
           >
@@ -527,7 +657,7 @@ export default function PaginaNuevaPlanilla() {
           {pasoActual < 4 ? (
             <button
               onClick={() => setPasoActual(pasoActual + 1)}
-              disabled={!puedeAvanzar()}
+              disabled={!puedeAvanzar() || guardando}
               className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-40"
               style={{ background: 'linear-gradient(135deg, #2980B9, #1F6691)' }}
             >
@@ -536,12 +666,12 @@ export default function PaginaNuevaPlanilla() {
             </button>
           ) : (
             <button
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #27AE60, #1E8449)' }}
-              onClick={() => alert('Planilla enviada correctamente')}
+              onClick={handleEnviarPlanilla}
+              disabled={guardando}
             >
-              <Check size={16} />
-              Enviar Planilla
+              {guardando ? 'Enviando...' : <><Check size={16} /> Enviar Planilla</>}
             </button>
           )}
         </div>
