@@ -7,83 +7,7 @@ import {
   ArrowUpRight, AlertTriangle, Monitor, Beaker, ChevronRight,
   TrendingUp, Clock, Shield, CheckCircle2, XCircle, Minus
 } from 'lucide-react';
-
-// ============================================
-// DATOS DE EJEMPLO (se reemplazarán con Supabase)
-// ============================================
-const datosKPI = [
-  {
-    id: 'competiciones',
-    titulo: 'Competiciones Activas',
-    valor: '2',
-    icono: Trophy,
-    colorFondo: '#EBF5FF',
-    colorIcono: '#2980B9',
-    enlace: '/competiciones',
-  },
-  {
-    id: 'habilitaciones',
-    titulo: 'Habilitaciones Pendientes',
-    valor: '0',
-    icono: Users,
-    colorFondo: '#DEF7EC',
-    colorIcono: '#27AE60',
-    enlace: '/jugadores',
-  },
-  {
-    id: 'multas',
-    titulo: 'Multas del Mes',
-    valor: '$ 30.00',
-    icono: DollarSign,
-    colorFondo: '#FEF3C7',
-    colorIcono: '#D4A843',
-    enlace: '/disciplinario/multas',
-  },
-  {
-    id: 'partidos',
-    titulo: 'Partidos Próximos',
-    valor: '179',
-    icono: Calendar,
-    colorFondo: '#EBF5FF',
-    colorIcono: '#2980B9',
-    enlace: '/competiciones/fixture',
-  },
-];
-
-const jugadoresEjemplo = [
-  { nombre: 'Ángel Mena', club: 'León de Quito', estado: 'ACTIVO' },
-  { nombre: 'Gonzalo Plata', club: 'Barcelona SC', estado: 'PENDIENTE' },
-  { nombre: 'Moisés Caicedo', club: 'Independiente', estado: 'ACTIVO' },
-  { nombre: 'Enner Valencia', club: 'Emelec', estado: 'ACTIVO' },
-  { nombre: 'Pervis Estupiñán', club: 'LDU Quito', estado: 'SUSPENDIDO' },
-];
-
-const planillasEjemplo = [
-  { local: 'Barcelona SC', visitante: 'Emelec', golLocal: 1, golVisit: 0, estado: 'Finalizado' },
-  { local: 'LDU Quito', visitante: 'El Nacional', golLocal: 2, golVisit: 1, estado: 'Finalizado' },
-  { local: 'Independiente', visitante: 'Aucas', golLocal: 2, golVisit: 2, estado: 'Finalizado' },
-];
-
-const novedadesEjemplo = [
-  {
-    titulo: 'Barcelona SC 2 - 1 Emelec',
-    subtitulo: 'Clásico del Astillero',
-    fecha: '21 de Mayo, 2026',
-    tipo: 'resultado',
-  },
-  {
-    titulo: 'LDU Quito 0 - 1 Independiente',
-    subtitulo: 'Jornada 15 - Serie A',
-    fecha: '21 de Mayo, 2026',
-    tipo: 'resultado',
-  },
-  {
-    titulo: 'Deportivo Cuenca 0 - 0 Mushuc Runa',
-    subtitulo: 'Jornada 15 - Serie A',
-    fecha: '21 de Mayo, 2026',
-    tipo: 'resultado',
-  },
-];
+import { crearClienteNavegador } from '@/lib/supabase/cliente';
 
 // Componente de Insignia de estado
 function Insignia({ estado }: { estado: string }) {
@@ -107,10 +31,156 @@ function Insignia({ estado }: { estado: string }) {
 
 export default function PaginaDashboard() {
   const [animado, setAnimado] = useState(false);
+  const [cargando, setCargando] = useState(true);
+  
+  const [kpiData, setKpiData] = useState({
+    competiciones: '0',
+    habilitaciones: '0',
+    multas: '$ 0.00',
+    partidos: '0'
+  });
+  const [jugadoresList, setJugadoresList] = useState<any[]>([]);
+  const [partidosList, setPartidosList] = useState<any[]>([]);
+  const [novedadesList, setNovedadesList] = useState<any[]>([]);
 
   useEffect(() => {
     setAnimado(true);
+
+    async function loadDashboardData() {
+      try {
+        const supabase = crearClienteNavegador();
+
+        // 1. Fetch KPIs
+        // A. Competiciones
+        const { count: countComps } = await supabase
+          .from('competiciones')
+          .select('*', { count: 'exact', head: true });
+
+        // B. Habilitaciones (Jugadores con estado 'PENDIENTE')
+        const { count: countPendientes } = await supabase
+          .from('jugadores')
+          .select('*', { count: 'exact', head: true })
+          .eq('estado', 'PENDIENTE');
+
+        // C. Multas
+        const { data: multasData } = await supabase
+          .from('multas')
+          .select('monto_usd');
+        const totalMultas = multasData?.reduce((acc, curr) => acc + parseFloat(curr.monto_usd as any || 0), 0) || 0;
+
+        // D. Partidos
+        const { count: countPartidos } = await supabase
+          .from('partidos')
+          .select('*', { count: 'exact', head: true });
+
+        setKpiData({
+          competiciones: (countComps || 0).toString(),
+          habilitaciones: (countPendientes || 0).toString(),
+          multas: `$ ${totalMultas.toFixed(2)}`,
+          partidos: (countPartidos || 0).toString()
+        });
+
+        // 2. Fetch recent players (latest 5 players added)
+        const { data: recentJugadores } = await supabase
+          .from('jugadores')
+          .select('nombre_completo, estado, clubes(nombre)')
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (recentJugadores) {
+          setJugadoresList(recentJugadores.map((j: any) => ({
+            nombre: j.nombre_completo,
+            club: j.clubes?.nombre || 'Sin Club',
+            estado: j.estado
+          })));
+        }
+
+        // 3. Fetch recent matches (latest 3 finished/played matches)
+        const { data: recentPartidos } = await supabase
+          .from('partidos')
+          .select('goles_local, goles_visitante, estado, local:club_local_id(nombre), visitante:club_visitante_id(nombre)')
+          .eq('estado', 'FINALIZADO')
+          .order('fecha_hora', { ascending: false })
+          .limit(3);
+
+        if (recentPartidos) {
+          setPartidosList(recentPartidos.map((p: any) => ({
+            local: p.local?.nombre || 'Local',
+            visitante: p.visitante?.nombre || 'Visitante',
+            golLocal: p.goles_local || 0,
+            golVisit: p.goles_visitante || 0,
+            estado: p.estado
+          })));
+        }
+
+        // 4. Fetch recent matches for novedades (latest 3 events overall, regardless of finished or scheduled)
+        const { data: recentEvents } = await supabase
+          .from('partidos')
+          .select('fecha_hora, goles_local, goles_visitante, estado, local:club_local_id(nombre), visitante:club_visitante_id(nombre)')
+          .order('fecha_hora', { ascending: false })
+          .limit(3);
+
+        if (recentEvents) {
+          setNovedadesList(recentEvents.map((e: any) => {
+            const date = new Date(e.fecha_hora);
+            const formattedDate = date.toLocaleDateString('es-EC', { day: 'numeric', month: 'long', year: 'numeric' });
+            return {
+              titulo: `${e.local?.nombre || 'Local'} vs ${e.visitante?.nombre || 'Visitante'}`,
+              subtitulo: e.estado === 'FINALIZADO' ? `Resultado: ${e.goles_local} - ${e.goles_visitante}` : `Estado: ${e.estado}`,
+              fecha: formattedDate,
+              tipo: 'partido'
+            };
+          }));
+        }
+
+      } catch (err) {
+        console.error('Error loading dashboard data:', err);
+      } finally {
+        setCargando(false);
+      }
+    }
+
+    loadDashboardData();
   }, []);
+
+  const datosKPI = [
+    {
+      id: 'competiciones',
+      titulo: 'Competiciones Activas',
+      valor: kpiData.competiciones,
+      icono: Trophy,
+      colorFondo: '#EBF5FF',
+      colorIcono: '#2980B9',
+      enlace: '/competiciones',
+    },
+    {
+      id: 'habilitaciones',
+      titulo: 'Habilitaciones Pendientes',
+      valor: kpiData.habilitaciones,
+      icono: Users,
+      colorFondo: '#DEF7EC',
+      colorIcono: '#27AE60',
+      enlace: '/jugadores',
+    },
+    {
+      id: 'multas',
+      titulo: 'Multas del Mes',
+      valor: kpiData.multas,
+      icono: DollarSign,
+      colorFondo: '#FEF3C7',
+      colorIcono: '#D4A843',
+      enlace: '/disciplinario/multas',
+    },
+    {
+      id: 'partidos',
+      titulo: 'Partidos Registrados',
+      valor: kpiData.partidos,
+      icono: Calendar,
+      colorFondo: '#EBF5FF',
+      colorIcono: '#2980B9',
+      enlace: '/competiciones/fixture',
+    },
+  ];
 
   return (
     <div className="space-y-6 max-w-[1440px] mx-auto">
@@ -262,23 +332,37 @@ export default function PaginaDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {jugadoresEjemplo.map((j, i) => (
-                    <tr
-                      key={i}
-                      className="border-t"
-                      style={{ borderColor: 'var(--borde-suave)' }}
-                    >
-                      <td className="py-2.5 text-sm font-medium" style={{ color: 'var(--texto-primario)' }}>
-                        {j.nombre}
-                      </td>
-                      <td className="py-2.5 text-sm" style={{ color: 'var(--texto-secundario)' }}>
-                        {j.club}
-                      </td>
-                      <td className="py-2.5 text-right">
-                        <Insignia estado={j.estado} />
+                  {cargando ? (
+                    <tr>
+                      <td colSpan={3} className="py-6 text-center text-sm" style={{ color: 'var(--texto-terciario)' }}>
+                        Cargando...
                       </td>
                     </tr>
-                  ))}
+                  ) : jugadoresList.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-6 text-center text-sm" style={{ color: 'var(--texto-terciario)' }}>
+                        No hay jugadores registrados.
+                      </td>
+                    </tr>
+                  ) : (
+                    jugadoresList.map((j, i) => (
+                      <tr
+                        key={i}
+                        className="border-t"
+                        style={{ borderColor: 'var(--borde-suave)' }}
+                      >
+                        <td className="py-2.5 text-sm font-medium" style={{ color: 'var(--texto-primario)' }}>
+                          {j.nombre}
+                        </td>
+                        <td className="py-2.5 text-sm" style={{ color: 'var(--texto-secundario)' }}>
+                          {j.club}
+                        </td>
+                        <td className="py-2.5 text-right">
+                          <Insignia estado={j.estado} />
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -329,54 +413,54 @@ export default function PaginaDashboard() {
               Planillas Recientes
             </p>
             <div className="space-y-2">
-              {planillasEjemplo.map((p, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between px-4 py-3 rounded-lg transition-colors"
-                  style={{
-                    background: 'var(--fondo-principal)',
-                    border: '1px solid var(--borde-suave)',
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="font-semibold" style={{ color: 'var(--texto-primario)' }}>
-                      {p.local}
-                    </span>
-                    <span
-                      className="flex items-center justify-center rounded font-bold text-xs px-2 py-0.5"
-                      style={{
-                        background: 'var(--ligapro-navy)',
-                        color: 'white',
-                        minWidth: '44px',
-                      }}
-                    >
-                      {p.golLocal} - {p.golVisit}
-                    </span>
-                    <span className="font-semibold" style={{ color: 'var(--texto-primario)' }}>
-                      {p.visitante}
+              {cargando ? (
+                <div className="py-4 text-center text-sm" style={{ color: 'var(--texto-terciario)' }}>
+                  Cargando...
+                </div>
+              ) : partidosList.length === 0 ? (
+                <div className="py-4 text-center text-sm" style={{ color: 'var(--texto-terciario)' }}>
+                  No hay partidos finalizados.
+                </div>
+              ) : (
+                partidosList.map((p, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between px-4 py-3 rounded-lg transition-colors"
+                    style={{
+                      background: 'var(--fondo-principal)',
+                      border: '1px solid var(--borde-suave)',
+                    }}
+                  >
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-semibold" style={{ color: 'var(--texto-primario)' }}>
+                        {p.local}
+                      </span>
+                      <span
+                        className="flex items-center justify-center rounded font-bold text-xs px-2 py-0.5"
+                        style={{
+                          background: 'var(--ligapro-navy)',
+                          color: 'white',
+                          minWidth: '44px',
+                        }}
+                      >
+                        {p.golLocal} - {p.golVisit}
+                      </span>
+                      <span className="font-semibold" style={{ color: 'var(--texto-primario)' }}>
+                        {p.visitante}
+                      </span>
+                    </div>
+                    <span className="text-xs font-medium" style={{ color: 'var(--texto-secundario)' }}>
+                      Finalizado
                     </span>
                   </div>
-                  <Link
-                    href={`/planillas/${i + 1}`}
-                    className="text-xs font-medium no-underline"
-                    style={{ color: 'var(--ligapro-blue)' }}
-                  >
-                    Ver
-                  </Link>
-                </div>
-              ))}
+                ))
+              )}
             </div>
             <Link
               href="/planillas/nueva"
               className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white no-underline transition-all"
               style={{
                 background: 'linear-gradient(135deg, #C0392B, #96281B)',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.opacity = '0.9';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.opacity = '1';
               }}
             >
               <FileText size={16} />
@@ -618,23 +702,33 @@ export default function PaginaDashboard() {
             </h2>
           </div>
           <div className="p-4 space-y-3">
-            {novedadesEjemplo.map((n, i) => (
-              <div
-                key={i}
-                className="pb-3 border-b last:border-b-0"
-                style={{ borderColor: 'var(--borde-suave)' }}
-              >
-                <p className="text-sm font-semibold" style={{ color: 'var(--texto-primario)' }}>
-                  {n.titulo}
-                </p>
-                <p className="text-xs" style={{ color: 'var(--texto-secundario)' }}>
-                  {n.subtitulo}
-                </p>
-                <p className="text-xs mt-1" style={{ color: 'var(--texto-terciario)' }}>
-                  {n.fecha}
-                </p>
+            {cargando ? (
+              <div className="py-4 text-center text-sm" style={{ color: 'var(--texto-terciario)' }}>
+                Cargando...
               </div>
-            ))}
+            ) : novedadesList.length === 0 ? (
+              <div className="py-4 text-center text-sm" style={{ color: 'var(--texto-terciario)' }}>
+                No hay novedades recientes.
+              </div>
+            ) : (
+              novedadesList.map((n: any, i: number) => (
+                <div
+                  key={i}
+                  className="pb-3 border-b last:border-b-0"
+                  style={{ borderColor: 'var(--borde-suave)' }}
+                >
+                  <p className="text-sm font-semibold" style={{ color: 'var(--texto-primario)' }}>
+                    {n.titulo}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--texto-secundario)' }}>
+                    {n.subtitulo}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--texto-terciario)' }}>
+                    {n.fecha}
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
