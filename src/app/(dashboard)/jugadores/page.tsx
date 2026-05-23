@@ -63,8 +63,18 @@ export default function PaginaJugadores() {
   const [medicos, setMedicos] = useState<any[]>([]);
 
   useEffect(() => {
-    const match = document.cookie.match(/(^| )mock_session_role=([^;]+)/);
-    if (match) setUserRole(decodeURIComponent(match[2]));
+    const fetchUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        if (user.email === 'admin@ligapro.ec') {
+           setUserRole('admin');
+        } else {
+           const { data: perfil } = await supabase.from('perfiles').select('rol').eq('user_id', user.id).single();
+           setUserRole(perfil?.rol?.toLowerCase() || 'usuario');
+        }
+      }
+    };
+    fetchUserRole();
     fetchDatos();
   }, []);
 
