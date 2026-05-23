@@ -74,9 +74,23 @@ export default function PaginaDetalleEstadio() {
         setMarcacionCancha(checklistData.estado_marcacion === 'OK');
         setRiegoFuncional(checklistData.estado_riego === 'OK');
         setDrenajeFuncional(checklistData.estado_drenaje === 'OK');
-        setFirmaComisario(checklistData.observaciones?.includes('Firma:') ? checklistData.observaciones.split('Firma:')[1].trim() : '');
-        setObservaciones(checklistData.observaciones?.split('Firma:')[0].trim() || '');
-        // alturaCamaras no está en la base de datos, lo dejamos igual
+        
+        let obsTexto = checklistData.observaciones || '';
+        if (obsTexto.includes('Firma:')) {
+          setFirmaComisario(obsTexto.split('Firma:')[1].trim());
+          obsTexto = obsTexto.split('Firma:')[0];
+        } else {
+          setFirmaComisario('');
+        }
+        
+        if (obsTexto.includes('Camaras:')) {
+          setAlturaCamaras(Number(obsTexto.split('Camaras:')[1].trim()));
+          obsTexto = obsTexto.split('Camaras:')[0];
+        } else {
+          setAlturaCamaras(12);
+        }
+        
+        setObservaciones(obsTexto.trim());
       }
 
       // Cargar el club asociado y sus pasabolas (sin partido)
@@ -145,7 +159,7 @@ export default function PaginaDetalleEstadio() {
       estado_marcacion: marcacionCancha ? 'OK' : 'Malo',
       estado_riego: riegoFuncional ? 'OK' : 'Malo',
       estado_drenaje: drenajeFuncional ? 'OK' : 'Malo',
-      observaciones: observaciones + (firmaComisario ? `\nFirma: ${firmaComisario}` : ''),
+      observaciones: observaciones.trim() + `\nCamaras: ${alturaCamaras}` + (firmaComisario ? `\nFirma: ${firmaComisario}` : ''),
       pasabolas_registrados: pasabolas.length,
       // partido_id: null (asumimos que es para el estadio en general)
     };
