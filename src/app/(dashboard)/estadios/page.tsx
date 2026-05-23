@@ -61,6 +61,7 @@ export default function PaginaEstadios() {
 
   const handleEditarEstadio = (e: React.MouseEvent, estadio: any) => {
     e.preventDefault();
+    e.stopPropagation();
     setEstadioAEditar({
       id: estadio.id,
       nombre: estadio.nombre,
