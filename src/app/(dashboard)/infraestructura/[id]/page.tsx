@@ -48,6 +48,10 @@ export default function PaginaDetalleEstadio() {
 
   const [pasabolas, setPasabolas] = useState<Pasabolas[]>([]);
   const [clubIdAsociado, setClubIdAsociado] = useState<string | null>(null);
+  
+  // Para asociar un club si no hay
+  const [listaClubes, setListaClubes] = useState<{id: string, nombre: string}[]>([]);
+  const [clubSeleccionado, setClubSeleccionado] = useState<string>('');
 
   useEffect(() => {
     async function cargarDatos() {
@@ -109,6 +113,12 @@ export default function PaginaDetalleEstadio() {
         }
       }
 
+      // Cargar lista de todos los clubes para el dropdown
+      const { data: todosClubesData } = await supabase.from('clubes').select('id, nombre').order('nombre');
+      if (todosClubesData) {
+        setListaClubes(todosClubesData);
+      }
+
       setCargando(false);
     }
     cargarDatos();
@@ -147,6 +157,37 @@ export default function PaginaDetalleEstadio() {
   };
 
   const esEdadValida = (edad: number | null) => edad !== null && edad >= 14 && edad <= 17;
+
+  const asociarClub = async () => {
+    if (!clubSeleccionado) return;
+    setGuardando(true);
+    setMensaje({ tipo: '', texto: '' });
+    const supabase = crearClienteNavegador();
+    
+    // Asignar el estadio_id al club seleccionado
+    const { error } = await supabase.from('clubes').update({ estadio_id: id }).eq('id', clubSeleccionado);
+    if (error) {
+      setMensaje({ tipo: 'error', texto: 'Error al asociar el club: ' + error.message });
+    } else {
+      setClubIdAsociado(clubSeleccionado);
+      setMensaje({ tipo: 'exito', texto: 'Club asociado correctamente. Ya puedes registrar pasabolas.' });
+      // Cargar pasabolas si tuviera de antes
+      const { data: pasabolasData } = await supabase.from('pasabolas').select('*').eq('club_id', clubSeleccionado).is('partido_id', null);
+      if (pasabolasData && pasabolasData.length > 0) {
+        setPasabolas(pasabolasData.map(p => ({
+          id: p.id,
+          nombre: p.nombre_completo,
+          cedula: p.cedula,
+          fechaNacimiento: p.fecha_nacimiento,
+          edad: p.edad_calculada
+        })));
+      } else {
+        setPasabolas([]);
+      }
+    }
+    setGuardando(false);
+    setTimeout(() => setMensaje({ tipo: '', texto: '' }), 4000);
+  };
 
   const handleGuardar = async () => {
     setGuardando(true);
@@ -537,13 +578,39 @@ export default function PaginaDetalleEstadio() {
 
         <div className="p-5">
           {!clubIdAsociado && (
-            <div className="flex items-center gap-2 p-3 rounded-lg mb-4" style={{
+            <div className="flex flex-col gap-3 p-4 rounded-lg mb-4" style={{
               background: '#FEE2E2', border: '1px solid #FCA5A5',
             }}>
-              <AlertTriangle size={16} style={{ color: '#B91C1C' }} />
-              <span className="text-xs font-medium" style={{ color: '#B91C1C' }}>
-                Este estadio no tiene un club asociado registrado. No se pueden añadir pasabolas.
-              </span>
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} style={{ color: '#B91C1C' }} />
+                <span className="text-sm font-semibold" style={{ color: '#B91C1C' }}>
+                  Este estadio no tiene un club asociado registrado.
+                </span>
+              </div>
+              <p className="text-xs" style={{ color: '#991B1B' }}>
+                Para poder registrar los pasabolas, por favor asocie un club a este estadio:
+              </p>
+              <div className="flex gap-2">
+                <select 
+                  className="px-3 py-2 rounded-lg text-sm border outline-none flex-1"
+                  value={clubSeleccionado}
+                  onChange={(e) => setClubSeleccionado(e.target.value)}
+                  style={{ borderColor: 'var(--borde-suave)' }}
+                >
+                  <option value="">Seleccione un club...</option>
+                  {listaClubes.map(c => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+                <button 
+                  onClick={asociarClub}
+                  disabled={!clubSeleccionado || guardando}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-50"
+                  style={{ background: '#B91C1C' }}
+                >
+                  Asociar Club
+                </button>
+              </div>
             </div>
           )}
           {clubIdAsociado && !pasabolasValidos && (
