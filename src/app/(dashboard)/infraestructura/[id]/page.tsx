@@ -153,6 +153,27 @@ export default function PaginaDetalleEstadio() {
     setMensaje({ tipo: '', texto: '' });
     const supabase = crearClienteNavegador();
 
+    // Validar pasabolas primero
+    if (clubIdAsociado && pasabolas.length > 0) {
+      for (const p of pasabolas) {
+        if (!p.nombre || !p.cedula || !p.fechaNacimiento) {
+          setMensaje({ tipo: 'error', texto: 'Todos los pasabolas deben tener nombre, cédula y fecha de nacimiento.' });
+          setGuardando(false);
+          return;
+        }
+        const edad = calcularEdad(p.fechaNacimiento);
+        if (edad === null || edad < 14 || edad > 17) {
+          setMensaje({ tipo: 'error', texto: `El pasabola ${p.nombre || 'sin nombre'} debe tener entre 14 y 17 años.` });
+          setGuardando(false);
+          return;
+        }
+      }
+    } else if (!clubIdAsociado && pasabolas.length > 0) {
+      setMensaje({ tipo: 'error', texto: 'No se pueden guardar pasabolas porque no hay un club asociado a este estadio.' });
+      setGuardando(false);
+      return;
+    }
+
     const checklistData = {
       estadio_id: id,
       altura_cesped_mm: alturaCesped,
@@ -182,16 +203,27 @@ export default function PaginaDetalleEstadio() {
 
     // Guardar pasabolas si hay un club asociado
     if (clubIdAsociado) {
-      await supabase.from('pasabolas').delete().eq('club_id', clubIdAsociado).is('partido_id', null);
+      const { error: errorDelete } = await supabase.from('pasabolas').delete().eq('club_id', clubIdAsociado).is('partido_id', null);
+      if (errorDelete) {
+        setMensaje({ tipo: 'error', texto: 'Error al limpiar pasabolas anteriores: ' + errorDelete.message });
+        setGuardando(false);
+        return;
+      }
+
       if (pasabolas.length > 0) {
         const pasabolasInsert = pasabolas.map(p => ({
           club_id: clubIdAsociado,
           nombre_completo: p.nombre,
           cedula: p.cedula,
-          fecha_nacimiento: p.fechaNacimiento || '2000-01-01', // Fallback
-          edad_calculada: p.edad
+          fecha_nacimiento: p.fechaNacimiento
         }));
-        await supabase.from('pasabolas').insert(pasabolasInsert);
+        
+        const { error: errorInsert } = await supabase.from('pasabolas').insert(pasabolasInsert);
+        if (errorInsert) {
+          setMensaje({ tipo: 'error', texto: 'Error al guardar los pasabolas: ' + errorInsert.message });
+          setGuardando(false);
+          return;
+        }
       }
     }
 
@@ -490,8 +522,8 @@ export default function PaginaDetalleEstadio() {
           </div>
           <button
             onClick={agregarPasabolas}
-            disabled={pasabolas.length >= 12}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+            disabled={pasabolas.length >= 12 || !clubIdAsociado}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               background: 'rgba(255,255,255,0.2)',
               color: 'white',
@@ -504,7 +536,17 @@ export default function PaginaDetalleEstadio() {
         </div>
 
         <div className="p-5">
-          {!pasabolasValidos && (
+          {!clubIdAsociado && (
+            <div className="flex items-center gap-2 p-3 rounded-lg mb-4" style={{
+              background: '#FEE2E2', border: '1px solid #FCA5A5',
+            }}>
+              <AlertTriangle size={16} style={{ color: '#B91C1C' }} />
+              <span className="text-xs font-medium" style={{ color: '#B91C1C' }}>
+                Este estadio no tiene un club asociado registrado. No se pueden añadir pasabolas.
+              </span>
+            </div>
+          )}
+          {clubIdAsociado && !pasabolasValidos && (
             <div className="flex items-center gap-2 p-3 rounded-lg mb-4" style={{
               background: '#FEF3C7', border: '1px solid #FCD34D',
             }}>
